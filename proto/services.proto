@@ -1,0 +1,37 @@
+// services.proto
+syntax = "proto3";
+package services;
+
+option go_package = "ouroboros/proto;services";
+
+// Common request/response for batching
+message BatchRequest {
+  repeated string ids = 1;
+}
+
+message Test1 {
+  string id = 1;
+  string mock_data_1 = 2;
+}
+
+message Test1BatchResponse {
+  repeated Test1 items = 1;
+}
+
+message Test2 {
+  string id = 1;
+  string mock_data_2 = 2;
+}
+
+message Test2BatchResponse {
+  repeated Test2 items = 1;
+}
+
+// Service definitions
+service Service1 {
+  rpc BatchGetTest1(BatchRequest) returns (Test1BatchResponse);
+}
+
+service Service2 {
+  rpc BatchGetTest2(BatchRequest) returns (Test2BatchResponse);
+}

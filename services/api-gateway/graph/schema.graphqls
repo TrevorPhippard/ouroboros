@@ -1,0 +1,14 @@
+type User {
+  id: ID!
+  mockData1: String!
+}
+
+type Todo {
+  id: ID!
+  mockData2: String!
+}
+
+type Query {
+  users(ids: [ID!]!): [User!]!
+  todos(ids: [ID!]!): [Todo!]!
+}
