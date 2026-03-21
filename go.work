@@ -3,10 +3,10 @@ go 1.25.3
 use (
   .
   ./services/api-gateway
-  ./services/auth-service
-  ./services/connection-service
-  ./services/feed-service
-  ./services/notification-service
-  ./services/post-service
-  ./services/profile-service
+  ./services/auth
+  ./services/connection
+  ./services/feed
+  ./services/notification
+  ./services/post
+  ./services/profile
 )

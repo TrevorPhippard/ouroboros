@@ -35,4 +35,4 @@ api-gateway:
 	go run services/api-gateway/cmd/server/main.go
 
 auth-service:
-	go run services/auth-service/cmd/server/main.go
+	go run services/auth/cmd/server/main.go

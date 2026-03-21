@@ -1,4 +1,4 @@
-module auth-service
+module post
 
 go 1.25.3
 

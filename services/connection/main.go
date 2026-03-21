@@ -8,6 +8,7 @@ import (
 	pb "ouroboros/proto/generated/connection"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 type connServiceServer struct {
@@ -50,6 +51,8 @@ func main() {
 
 	s := grpc.NewServer()
 	pb.RegisterConnectionServiceServer(s, &connServiceServer{})
+
+	reflection.Register(s)
 
 	log.Println("Connection Service (gRPC) running on :50054")
 	if err := s.Serve(lis); err != nil {

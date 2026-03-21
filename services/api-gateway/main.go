@@ -22,6 +22,14 @@ import (
 	profilepb "ouroboros/proto/generated/profile"
 )
 
+// Helper function to get env or fallback
+func getEnv(key, fallback string) string {
+	if value, exists := os.LookupEnv(key); exists {
+		return value
+	}
+	return fallback
+}
+
 func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -32,42 +40,42 @@ func main() {
 	dialOptions := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 
 	// 1. Auth Service (:50053)
-	authConn, err := grpc.NewClient("localhost:50053", dialOptions...)
+	authConn, err := grpc.NewClient(getEnv("AUTH_SERVICE_URL", "localhost:50053"), dialOptions...)
 	if err != nil {
 		log.Fatalf("could not connect to auth-service: %v", err)
 	}
 	defer authConn.Close()
 
 	// 2. Connection Service (:50054)
-	connConn, err := grpc.NewClient("localhost:50054", dialOptions...)
+	connConn, err := grpc.NewClient(getEnv("CONNECTION_SERVICE_URL", "localhost:50054"), dialOptions...)
 	if err != nil {
 		log.Fatalf("could not connect to connection-service: %v", err)
 	}
 	defer connConn.Close()
 
 	// 3. Feed Service (:50055)
-	feedConn, err := grpc.NewClient("localhost:50055", dialOptions...)
+	feedConn, err := grpc.NewClient(getEnv("FEED_SERVICE_URL", "localhost:50055"), dialOptions...)
 	if err != nil {
 		log.Fatalf("could not connect to feed-service: %v", err)
 	}
 	defer feedConn.Close()
 
 	// 4. Notification Service (:50056)
-	notifConn, err := grpc.NewClient("localhost:50056", dialOptions...)
+	notifConn, err := grpc.NewClient(getEnv("NOTIFICATION_SERVICE_URL", "localhost:50056"), dialOptions...)
 	if err != nil {
 		log.Fatalf("could not connect to notification-service: %v", err)
 	}
 	defer notifConn.Close()
 
 	// 5. Post Service (:50057)
-	postConn, err := grpc.NewClient("localhost:50057", dialOptions...)
+	postConn, err := grpc.NewClient(getEnv("POST_SERVICE_URL", "localhost:50057"), dialOptions...)
 	if err != nil {
 		log.Fatalf("could not connect to post-service: %v", err)
 	}
 	defer postConn.Close()
 
 	// 6. Profile Service (:50058)
-	profileConn, err := grpc.NewClient("localhost:50058", dialOptions...)
+	profileConn, err := grpc.NewClient(getEnv("PROFILE_SERVICE_URL", "localhost:50058"), dialOptions...)
 	if err != nil {
 		log.Fatalf("could not connect to profile-service: %v", err)
 	}

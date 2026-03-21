@@ -1,4 +1,4 @@
-module notification-service
+module profile
 
 go 1.25.3
 

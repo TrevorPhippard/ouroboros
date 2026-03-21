@@ -1,0 +1,142 @@
+version: "3.8"
+
+services:
+  # ==========================================
+  # DATABASES (Unchanged)
+  # ==========================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: ouroboros_postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ouroboros
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d ouroboros"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  neo4j:
+    image: neo4j:5
+    container_name: ouroboros_neo4j
+    environment:
+      NEO4J_AUTH: neo4j/password
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "password", "RETURN 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  # ==========================================
+  # gRPC MICROSERVICES (Now built via Dockerfile)
+  # ==========================================
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: auth
+    container_name: ouroboros_auth
+    ports:
+      - "50053:50053"
+
+  connection-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: connection
+    container_name: ouroboros_connection
+    ports:
+      - "50054:50054"
+    depends_on:
+      neo4j:
+        condition: service_healthy
+
+  feed-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: feed
+    container_name: ouroboros_feed
+    ports:
+      - "50055:50055"
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: notification
+    container_name: ouroboros_notification
+    ports:
+      - "50056:50056"
+
+  post-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: post
+    container_name: ouroboros_post
+    ports:
+      - "50057:50057"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  profile-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: profile
+    container_name: ouroboros_profile
+    ports:
+      - "50058:50058"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ==========================================
+  # API GATEWAY
+  # ==========================================
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: api-gateway
+    container_name: ouroboros_gateway
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - AUTH_SERVICE_URL=auth-service:50053
+      - CONNECTION_SERVICE_URL=connection-service:50054
+      - FEED_SERVICE_URL=feed-service:50055
+      - NOTIFICATION_SERVICE_URL=notification-service:50056
+      - POST_SERVICE_URL=post-service:50057
+      - PROFILE_SERVICE_URL=profile-service:50058
+    depends_on:
+      - auth-service
+      - connection-service
+      - feed-service
+      - notification-service
+      - post-service
+      - profile-service
+
+volumes:
+  pg_data:
+  neo4j_data:

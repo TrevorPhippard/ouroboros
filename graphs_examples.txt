@@ -1,0 +1,86 @@
+query GetUserProfile {
+  user(id: "user_99") {
+    id
+    username
+    email
+    displayName
+    avatarUrl
+    bio
+  }
+}
+
+
+mutation FollowSomeone {
+  followUser(followerId: "me_123", followeeId: "them_456")
+}
+
+query CheckSocialStats {
+  user(id: "me_123") {
+    username
+    followersCount
+    followingCount
+    isFollowing # Requires context in your resolver
+  }
+}
+
+mutation CreateNewPost {
+  createPost(input: {
+    authorId: "user_01",
+    content: "Ouroboros is officially online! 🐍"
+  }) {
+    id
+    content
+    createdAt
+    author {
+      username
+    }
+  }
+}
+
+query GetSpecificPost {
+  post(id: "post_uuid_1") {
+    content
+    author {
+      displayName
+    }
+    comments(limit: 5) {
+      id
+      content
+      author {
+        username
+      }
+    }
+  }
+}
+
+query GetMyFeed {
+  feed(userId: "user_01", limit: 10) {
+    items {
+      postId
+      cursor
+      post {
+        content
+        author {
+          username
+          avatarUrl
+        }
+      }
+    }
+  }
+}
+
+query MyNotifications {
+  notifications(userId: "user_01", limit: 10) {
+    id
+    type
+    read
+    createdAt
+    actor {
+      username
+    }
+  }
+}
+
+mutation ClearNotification {
+  markNotificationRead(id: "notif_uuid_1")
+}

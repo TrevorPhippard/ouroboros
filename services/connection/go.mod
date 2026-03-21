@@ -1,4 +1,4 @@
-module post-service
+module connection
 
 go 1.25.3
 

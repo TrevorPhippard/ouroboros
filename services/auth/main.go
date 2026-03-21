@@ -10,6 +10,7 @@ import (
 	pb "ouroboros/proto/generated/auth"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 type authServiceServer struct {
@@ -53,6 +54,8 @@ func main() {
 
 	// Updated registration function to match the service name in auth.proto
 	pb.RegisterAuthServiceServer(s, &authServiceServer{})
+
+	reflection.Register(s)
 
 	log.Println("Auth Service (gRPC) running on :50053")
 	if err := s.Serve(lis); err != nil {

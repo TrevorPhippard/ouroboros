@@ -9,6 +9,7 @@ import (
 	pb "ouroboros/proto/generated/feed"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 type feedServiceServer struct {
@@ -44,6 +45,8 @@ func main() {
 
 	s := grpc.NewServer()
 	pb.RegisterFeedServiceServer(s, &feedServiceServer{})
+
+	reflection.Register(s)
 
 	log.Println("Feed Service (gRPC) running on :50055")
 	if err := s.Serve(lis); err != nil {
