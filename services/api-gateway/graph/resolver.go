@@ -1,12 +1,12 @@
 package graph
 
 import (
-	authPb "ouroboros/proto/generated/auth"
-	connectionPb "ouroboros/proto/generated/connection"
-	feedPb "ouroboros/proto/generated/feed"
-	notificationPb "ouroboros/proto/generated/notification"
-	postPb "ouroboros/proto/generated/post"
-	profilePb "ouroboros/proto/generated/profile"
+	authpb "ouroboros/proto/generated/auth"
+	connpb "ouroboros/proto/generated/connection"
+	feedpb "ouroboros/proto/generated/feed"
+	notifpb "ouroboros/proto/generated/notification"
+	postpb "ouroboros/proto/generated/post"
+	profilepb "ouroboros/proto/generated/profile"
 )
 
 // This file will not be regenerated automatically.
@@ -14,10 +14,10 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	ConnectionServiceClient connectionPb.ConnectionServiceClient
-	AuthServiceClient       authPb.AuthServiceClient
-	FeedServiceClient       feedPb.FeedServiceClient
-	NotificationServiceClient notificationPb.NotificationServiceClient
-	PostServiceClient       postPb.PostServiceClient
-	ProfileServiceClient    profilePb.ProfileServiceClient
+	AuthClient         authpb.AuthServiceClient
+	ConnectionClient   connpb.ConnectionServiceClient
+	FeedClient         feedpb.FeedServiceClient
+	NotificationClient notifpb.NotificationServiceClient
+	PostClient         postpb.PostServiceClient
+	ProfileClient      profilepb.ProfileServiceClient
 }

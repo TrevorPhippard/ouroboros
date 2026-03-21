@@ -9,50 +9,142 @@ import (
 	"api-gateway/graph/model"
 	"context"
 	"fmt"
-	pb "ouroboros/proto/generated/" // Adjust this to match your actual proto module path
+	authpb "ouroboros/proto/generated/auth"
+	connpb "ouroboros/proto/generated/connection"
+	feedpb "ouroboros/proto/generated/feed"
+	postpb "ouroboros/proto/generated/post"
+	profilepb "ouroboros/proto/generated/profile"
 )
+
+// CreatePost is the resolver for the createPost mutation.
+func (r *mutationResolver) CreatePost(ctx context.Context, input model.CreatePostInput) (*model.Post, error) {
+	res, err := r.PostClient.CreatePost(ctx, &postpb.CreatePostRequest{
+		AuthorId: input.AuthorID,
+		Content:  input.Content,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.Post{
+		ID:        res.Id,
+		Content:   res.Content,
+		CreatedAt: res.CreatedAt,
+		AuthorID:  res.AuthorId,
+	}, nil
+}
+
+// CreateComment is the resolver for the createComment field.
+func (r *mutationResolver) CreateComment(ctx context.Context, input model.CreateCommentInput) (*model.Comment, error) {
+	panic(fmt.Errorf("not implemented: CreateComment - createComment"))
+}
+
+// FollowUser is the resolver for the followUser mutation.
+func (r *mutationResolver) FollowUser(ctx context.Context, followerID string, followeeID string) (bool, error) {
+	res, err := r.ConnectionClient.FollowUser(ctx, &connpb.FollowUserRequest{
+		FollowerId: followerID,
+		FolloweeId: followeeID,
+	})
+	if err != nil {
+		return false, err
+	}
+
+	return res.Success, nil
+}
+
+// UnfollowUser is the resolver for the unfollowUser field.
+func (r *mutationResolver) UnfollowUser(ctx context.Context, followerID string, followeeID string) (bool, error) {
+	panic(fmt.Errorf("not implemented: UnfollowUser - unfollowUser"))
+}
+
+// MarkNotificationRead is the resolver for the markNotificationRead field.
+func (r *mutationResolver) MarkNotificationRead(ctx context.Context, id string) (bool, error) {
+	panic(fmt.Errorf("not implemented: MarkNotificationRead - markNotificationRead"))
+}
+
+// Me is the resolver for the me field.
+func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
+	panic(fmt.Errorf("not implemented: Me - me"))
+}
+
+// User is the resolver for the user query.
+func (r *queryResolver) User(ctx context.Context, id string) (*model.User, error) {
+	// 1. Fetch Auth details
+	authRes, err := r.AuthClient.GetUser(ctx, &authpb.GetUserRequest{Id: id})
+	if err != nil {
+		return nil, err
+	}
+
+	// 2. Fetch Profile details
+	profRes, err := r.ProfileClient.GetProfile(ctx, &profilepb.GetProfileRequest{UserId: id})
+	if err != nil {
+		return nil, err
+	}
+
+	// 3. Merge into the GraphQL model
+	return &model.User{
+		ID:          authRes.Id,
+		Email:       authRes.Email,
+		Username:    authRes.Username,
+		DisplayName: &profRes.DisplayName,
+		AvatarURL:   &profRes.AvatarUrl,
+		Bio:         &profRes.Bio,
+	}, nil
+}
 
 // Users is the resolver for the users field.
 func (r *queryResolver) Users(ctx context.Context, ids []string) ([]*model.User, error) {
-	// Call the gRPC User Service
-	req := &pb.BatchRequest{Ids: ids}
-	res, err := r.UserServiceClient.BatchGetTest1(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch users: %w", err)
-	}
-
-	// Map gRPC response to GraphQL models
-	var users []*model.User
-	for _, item := range res.Items {
-		users = append(users, &model.User{
-			ID:        item.Id,
-			MockData1: item.MockData_1,
-		})
-	}
-	return users, nil
+	panic(fmt.Errorf("not implemented: Users - users"))
 }
 
-// Todos is the resolver for the todos field.
-func (r *queryResolver) Todos(ctx context.Context, ids []string) ([]*model.Todo, error) {
-	// Call the gRPC Todo Service
-	req := &pb.BatchRequest{Ids: ids}
-	res, err := r.TodoServiceClient.BatchGetTest2(ctx, req)
+// Post is the resolver for the post field.
+func (r *queryResolver) Post(ctx context.Context, id string) (*model.Post, error) {
+	panic(fmt.Errorf("not implemented: Post - post"))
+}
+
+// PostsByIds is the resolver for the postsByIds field.
+func (r *queryResolver) PostsByIds(ctx context.Context, ids []string) ([]*model.Post, error) {
+	panic(fmt.Errorf("not implemented: PostsByIds - postsByIds"))
+}
+
+// Feed is the resolver for the feed query.
+func (r *queryResolver) Feed(ctx context.Context, userID string, limit *int32, cursor *string) (*model.FeedResponse, error) {
+	// Call Feed Service
+	feedRes, err := r.FeedClient.GetFeed(ctx, &feedpb.GetFeedRequest{UserId: userID})
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch todos: %w", err)
+		return nil, err
 	}
 
-	// Map gRPC response to GraphQL models
-	var todos []*model.Todo
-	for _, item := range res.Items {
-		todos = append(todos, &model.Todo{
-			ID:        item.Id,
-			MockData2: item.MockData_2,
+	var items []*model.FeedItem
+	for _, item := range feedRes.Items {
+		items = append(items, &model.FeedItem{
+			PostID: item.PostId,
+			Cursor: item.Cursor,
 		})
 	}
-	return todos, nil
+
+	return &model.FeedResponse{Items: items}, nil
 }
+
+// Notifications is the resolver for the notifications field.
+func (r *queryResolver) Notifications(ctx context.Context, userID string, limit *int32) ([]*model.Notification, error) {
+	panic(fmt.Errorf("not implemented: Notifications - notifications"))
+}
+
+// NotificationReceived is the resolver for the notificationReceived field.
+func (r *subscriptionResolver) NotificationReceived(ctx context.Context, userID string) (<-chan *model.Notification, error) {
+	panic(fmt.Errorf("not implemented: NotificationReceived - notificationReceived"))
+}
+
+// Mutation returns MutationResolver implementation.
+func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
+// Subscription returns SubscriptionResolver implementation.
+func (r *Resolver) Subscription() SubscriptionResolver { return &subscriptionResolver{r} }
+
+type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
+type subscriptionResolver struct{ *Resolver }

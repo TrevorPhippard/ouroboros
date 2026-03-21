@@ -12,33 +12,51 @@ import (
 )
 
 type profileServiceServer struct {
-	pb.UnimplementedService2Server
+	pb.UnimplementedProfileServiceServer
 }
 
-func (s *profileServiceServer) BatchGetTest2(ctx context.Context, req *pb.BatchRequest) (*pb.Test2BatchResponse, error) {
-	log.Printf("Profile Service: Fetching %d IDs", len(req.Ids))
+// GetProfile fetches a single user's profile information
+func (s *profileServiceServer) GetProfile(ctx context.Context, req *pb.GetProfileRequest) (*pb.Profile, error) {
+	log.Printf("Profile Service: Fetching profile for User: %s", req.UserId)
 
-	var items []*pb.Test2
-	for _, id := range req.Ids {
-		items = append(items, &pb.Test2{
-			Id:         id,
-			MockData_2: fmt.Sprintf("Profile Task Data for %s", id),
+	return &pb.Profile{
+		UserId:      req.UserId,
+		DisplayName: fmt.Sprintf("User %s", req.UserId),
+		AvatarUrl:   fmt.Sprintf("https://api.dicebear.com/7.x/avataaars/svg?seed=%s", req.UserId),
+		Bio:         "This is a mock bio for the Ouroboros social network.",
+	}, nil
+}
+
+// GetProfilesByUserIds handles batch profile lookups
+func (s *profileServiceServer) GetProfilesByUserIds(ctx context.Context, req *pb.GetProfilesByUserIdsRequest) (*pb.GetProfilesByUserIdsResponse, error) {
+	log.Printf("Profile Service: Batch fetching %d profiles", len(req.UserIds))
+
+	var profiles []*pb.Profile
+	for _, id := range req.UserIds {
+		profiles = append(profiles, &pb.Profile{
+			UserId:      id,
+			DisplayName: fmt.Sprintf("User %s", id),
+			AvatarUrl:   fmt.Sprintf("https://api.dicebear.com/7.x/avataaars/svg?seed=%s", id),
+			Bio:         "I am a user in the Ouroboros microservices ecosystem.",
 		})
 	}
 
-	return &pb.Test2BatchResponse{Items: items}, nil
+	return &pb.GetProfilesByUserIdsResponse{
+		Profiles: profiles,
+	}, nil
 }
 
 func main() {
-	lis, err := net.Listen("tcp", ":50053")
+	// Port 50058 selected to maintain uniqueness in the cluster
+	lis, err := net.Listen("tcp", ":50058")
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
 	s := grpc.NewServer()
-	pb.RegisterService2Server(s, &profileServiceServer{})
+	pb.RegisterProfileServiceServer(s, &profileServiceServer{})
 
-	log.Println("Profile Service (gRPC) running on :50053")
+	log.Println("Profile Service (gRPC) running on :50058")
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}

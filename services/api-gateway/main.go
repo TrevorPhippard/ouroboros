@@ -1,102 +1,101 @@
 package main
 
 import (
-	"api-gateway/graph"
 	"log"
 	"net/http"
 	"os"
 
+	"api-gateway/graph"
+
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
-	"github.com/rs/cors" // Import the CORS package
+	"github.com/rs/cors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	pb "ouroboros/proto"
+	// Importing the specific generated proto packages
+	authpb "ouroboros/proto/generated/auth"
+	connpb "ouroboros/proto/generated/connection"
+	feedpb "ouroboros/proto/generated/feed"
+	notifpb "ouroboros/proto/generated/notification"
+	postpb "ouroboros/proto/generated/post"
+	profilepb "ouroboros/proto/generated/profile"
 )
 
 func main() {
 	port := os.Getenv("PORT")
-	if port == "" { port = "4000" }
-
-	// Connect to User Service
-	userConn, err := grpc.Dial("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		log.Fatalf("could not connect to user-service: %v", err)
+	if port == "" {
+		port = "4000"
 	}
-	defer userConn.Close()
 
+	// Helper function to create gRPC connections
+	dialOptions := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 
-		// Connect to Auth Service
-	authConn, err := grpc.Dial("localhost:50052", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	// 1. Auth Service (:50053)
+	authConn, err := grpc.NewClient("localhost:50053", dialOptions...)
 	if err != nil {
 		log.Fatalf("could not connect to auth-service: %v", err)
 	}
 	defer authConn.Close()
 
-		// Connect to Connection Service
-	connConn, err := grpc.Dial("localhost:50053", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	// 2. Connection Service (:50054)
+	connConn, err := grpc.NewClient("localhost:50054", dialOptions...)
 	if err != nil {
 		log.Fatalf("could not connect to connection-service: %v", err)
 	}
 	defer connConn.Close()
 
-		// Connect to Feed Service
-	feedConn, err := grpc.Dial("localhost:50054", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	// 3. Feed Service (:50055)
+	feedConn, err := grpc.NewClient("localhost:50055", dialOptions...)
 	if err != nil {
 		log.Fatalf("could not connect to feed-service: %v", err)
 	}
 	defer feedConn.Close()
 
-		// Connect to Notification Service
-	notConn, err := grpc.Dial("localhost:50055", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	// 4. Notification Service (:50056)
+	notifConn, err := grpc.NewClient("localhost:50056", dialOptions...)
 	if err != nil {
 		log.Fatalf("could not connect to notification-service: %v", err)
 	}
-	defer notConn.Close()
+	defer notifConn.Close()
 
-		// Connect to Post Service
-	postConn, err := grpc.Dial("localhost:50056", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	// 5. Post Service (:50057)
+	postConn, err := grpc.NewClient("localhost:50057", dialOptions...)
 	if err != nil {
 		log.Fatalf("could not connect to post-service: %v", err)
 	}
 	defer postConn.Close()
 
-		// Connect to Profile Service
-	profileConn, err := grpc.Dial("localhost:50057", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	// 6. Profile Service (:50058)
+	profileConn, err := grpc.NewClient("localhost:50058", dialOptions...)
 	if err != nil {
 		log.Fatalf("could not connect to profile-service: %v", err)
 	}
 	defer profileConn.Close()
 
-
-	// Initialize Gateway with both clients
+	// Initialize Resolver with specific clients
 	resolver := &graph.Resolver{
-		AuthServiceClient: pb.NewService2Client(authConn),
-		ConnectionServiceClient: pb.NewService2Client(connConn),
-		FeedServiceClient: pb.NewService2Client(feedConn),
-		NotificationServiceClient: pb.NewService2Client(notConn),
-		PostServiceClient: pb.NewService2Client(postConn),
-		ProfileServiceClient: pb.NewService2Client(profileConn),
+		AuthClient:         authpb.NewAuthServiceClient(authConn),
+		ConnectionClient:   connpb.NewConnectionServiceClient(connConn),
+		FeedClient:         feedpb.NewFeedServiceClient(feedConn),
+		NotificationClient: notifpb.NewNotificationServiceClient(notifConn),
+		PostClient:         postpb.NewPostServiceClient(postConn),
+		ProfileClient:      profilepb.NewProfileServiceClient(profileConn),
 	}
 
 	srv := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: resolver}))
 
-// Configure CORS
+	// Configure CORS
 	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000"}, // Allow your Next.js app
-		AllowCredentials: true,                              // Required if you are sending cookies/sessions
+		AllowedOrigins:   []string{"http://localhost:3000"},
+		AllowCredentials: true,
 		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
 		AllowedHeaders:   []string{"Authorization", "Content-Type"},
-		Debug:            false, // Set to true if you need to debug CORS headers in your Go console
 	})
 
-// Wrap the GraphQL server handler with the CORS middleware
-graphqlHandler := c.Handler(srv)
-
 	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
-	http.Handle("/query", graphqlHandler)
+	http.Handle("/query", c.Handler(srv))
 
-	log.Printf("Gateway live at http://localhost:%s/", port)
+	log.Printf("Ouroboros Gateway live at http://localhost:%s/", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }

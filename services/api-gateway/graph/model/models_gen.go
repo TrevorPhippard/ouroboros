@@ -2,15 +2,74 @@
 
 package model
 
+type Comment struct {
+	ID        string `json:"id"`
+	PostID    string `json:"postId"`
+	AuthorID  string `json:"authorId"`
+	Content   string `json:"content"`
+	CreatedAt string `json:"createdAt"`
+	Author    *User  `json:"author"`
+}
+
+type CreateCommentInput struct {
+	AuthorID string `json:"authorId"`
+	PostID   string `json:"postId"`
+	Content  string `json:"content"`
+}
+
+type CreatePostInput struct {
+	AuthorID string `json:"authorId"`
+	Content  string `json:"content"`
+}
+
+type FeedItem struct {
+	PostID string `json:"postId"`
+	Cursor string `json:"cursor"`
+	Post   *Post  `json:"post,omitempty"`
+}
+
+type FeedResponse struct {
+	Items []*FeedItem `json:"items"`
+}
+
+type Mutation struct {
+}
+
+type Notification struct {
+	ID        string  `json:"id"`
+	UserID    string  `json:"userId"`
+	Type      string  `json:"type"`
+	ActorID   string  `json:"actorId"`
+	EntityID  *string `json:"entityId,omitempty"`
+	CreatedAt string  `json:"createdAt"`
+	Read      bool    `json:"read"`
+	Actor     *User   `json:"actor,omitempty"`
+}
+
+type Post struct {
+	ID        string     `json:"id"`
+	Content   string     `json:"content"`
+	CreatedAt string     `json:"createdAt"`
+	AuthorID  string     `json:"authorId"`
+	Author    *User      `json:"author"`
+	Comments  []*Comment `json:"comments"`
+}
+
 type Query struct {
 }
 
-type Todo struct {
-	ID        string `json:"id"`
-	MockData2 string `json:"mockData2"`
+type Subscription struct {
 }
 
 type User struct {
-	ID        string `json:"id"`
-	MockData1 string `json:"mockData1"`
+	ID             string  `json:"id"`
+	Email          string  `json:"email"`
+	Username       string  `json:"username"`
+	DisplayName    *string `json:"displayName,omitempty"`
+	AvatarURL      *string `json:"avatarUrl,omitempty"`
+	Bio            *string `json:"bio,omitempty"`
+	FollowersCount int32   `json:"followersCount"`
+	FollowingCount int32   `json:"followingCount"`
+	IsFollowing    bool    `json:"isFollowing"`
+	Posts          []*Post `json:"posts"`
 }

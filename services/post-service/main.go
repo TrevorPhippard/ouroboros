@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"time"
 
 	pb "ouroboros/proto/generated/post"
 
@@ -12,33 +13,73 @@ import (
 )
 
 type postServiceServer struct {
-	pb.UnimplementedService2Server
+	pb.UnimplementedPostServiceServer
 }
 
-func (s *postServiceServer) BatchGetTest2(ctx context.Context, req *pb.BatchRequest) (*pb.Test2BatchResponse, error) {
-	log.Printf("Post Service: Fetching %d IDs", len(req.Ids))
+func (s *postServiceServer) CreatePost(ctx context.Context, req *pb.CreatePostRequest) (*pb.Post, error) {
+	log.Printf("Post Service: Creating post for Author: %s", req.AuthorId)
 
-	var items []*pb.Test2
+	return &pb.Post{
+		Id:        "new-post-uuid",
+		AuthorId:  req.AuthorId,
+		Content:   req.Content,
+		CreatedAt: time.Now().Format(time.RFC3339),
+	}, nil
+}
+
+func (s *postServiceServer) GetPost(ctx context.Context, req *pb.GetPostRequest) (*pb.Post, error) {
+	log.Printf("Post Service: Fetching Post ID: %s", req.Id)
+
+	return &pb.Post{
+		Id:        req.Id,
+		AuthorId:  "mock-author-id",
+		Content:   "This is a mock post content",
+		CreatedAt: time.Now().Format(time.RFC3339),
+	}, nil
+}
+
+func (s *postServiceServer) GetPostsByIds(ctx context.Context, req *pb.GetPostsByIdsRequest) (*pb.GetPostsByIdsResponse, error) {
+	log.Printf("Post Service: Batch fetching %d posts", len(req.Ids))
+
+	var posts []*pb.Post
 	for _, id := range req.Ids {
-		items = append(items, &pb.Test2{
-			Id:         id,
-			MockData_2: fmt.Sprintf("Post Task Data for %s", id),
+		posts = append(posts, &pb.Post{
+			Id:        id,
+			AuthorId:  "mock-author-id",
+			Content:   fmt.Sprintf("Content for post %s", id),
+			CreatedAt: time.Now().Format(time.RFC3339),
 		})
 	}
 
-	return &pb.Test2BatchResponse{Items: items}, nil
+	return &pb.GetPostsByIdsResponse{Posts: posts}, nil
+}
+
+func (s *postServiceServer) GetCommentsByPostId(ctx context.Context, req *pb.GetCommentsRequest) (*pb.GetCommentsResponse, error) {
+	log.Printf("Post Service: Fetching comments for Post: %s", req.PostId)
+
+	var comments []*pb.Comment
+	comments = append(comments, &pb.Comment{
+		Id:        "comment-1",
+		PostId:    req.PostId,
+		AuthorId:  "commenter-id",
+		Content:   "Great post!",
+		CreatedAt: time.Now().Format(time.RFC3339),
+	})
+
+	return &pb.GetCommentsResponse{Comments: comments}, nil
 }
 
 func main() {
-	lis, err := net.Listen("tcp", ":50053")
+	// Port 50057 to keep the Ouroboros service map unique
+	lis, err := net.Listen("tcp", ":50057")
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
 	s := grpc.NewServer()
-	pb.RegisterService2Server(s, &postServiceServer{})
+	pb.RegisterPostServiceServer(s, &postServiceServer{})
 
-	log.Println("Post Service (gRPC) running on :50053")
+	log.Println("Post Service (gRPC) running on :50057")
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}

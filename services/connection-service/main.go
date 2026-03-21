@@ -2,43 +2,56 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net"
 
-	pb "ouroboros/proto"
+	pb "ouroboros/proto/generated/connection"
 
 	"google.golang.org/grpc"
 )
 
 type connServiceServer struct {
-	pb.UnimplementedService2Server
+	pb.UnimplementedConnectionServiceServer
 }
 
-func (s *connServiceServer) BatchGetTest2(ctx context.Context, req *pb.BatchRequest) (*pb.Test2BatchResponse, error) {
-	log.Printf("Connection Service: Fetching %d IDs", len(req.Ids))
+func (s *connServiceServer) FollowUser(ctx context.Context, req *pb.FollowUserRequest) (*pb.FollowUserResponse, error) {
+	log.Printf("Connection Service: %s is following %s", req.FollowerId, req.FolloweeId)
+	// Logic for Neo4j or database insertion would go here
+	return &pb.FollowUserResponse{Success: true}, nil
+}
 
-	var items []*pb.Test2
-	for _, id := range req.Ids {
-		items = append(items, &pb.Test2{
-			Id:         id,
-			MockData_2: fmt.Sprintf("Connection Task Data for %s", id),
-		})
-	}
+func (s *connServiceServer) UnfollowUser(ctx context.Context, req *pb.UnfollowUserRequest) (*pb.UnfollowUserResponse, error) {
+	log.Printf("Connection Service: %s unfollowed %s", req.FollowerId, req.FolloweeId)
+	return &pb.UnfollowUserResponse{Success: true}, nil
+}
 
-	return &pb.Test2BatchResponse{Items: items}, nil
+func (s *connServiceServer) GetFollowersCount(ctx context.Context, req *pb.UserRequest) (*pb.CountResponse, error) {
+	log.Printf("Connection Service: Getting followers count for %s", req.UserId)
+	return &pb.CountResponse{Count: 42}, nil // Mock count
+}
+
+func (s *connServiceServer) GetFollowingCount(ctx context.Context, req *pb.UserRequest) (*pb.CountResponse, error) {
+	log.Printf("Connection Service: Getting following count for %s", req.UserId)
+	return &pb.CountResponse{Count: 10}, nil // Mock count
+}
+
+func (s *connServiceServer) IsFollowing(ctx context.Context, req *pb.IsFollowingRequest) (*pb.IsFollowingResponse, error) {
+	log.Printf("Connection Service: Checking if %s follows %s", req.FollowerId, req.FolloweeId)
+	return &pb.IsFollowingResponse{IsFollowing: true}, nil
 }
 
 func main() {
-	lis, err := net.Listen("tcp", ":50053")
+	// Note: Ensure this port doesn't conflict with your Auth service (:50053)
+	// Usually, Connection Service might sit on :50054 or similar
+	lis, err := net.Listen("tcp", ":50054")
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
 	s := grpc.NewServer()
-	pb.RegisterService2Server(s, &connServiceServer{})
+	pb.RegisterConnectionServiceServer(s, &connServiceServer{})
 
-	log.Println("Connection Service (gRPC) running on :50053")
+	log.Println("Connection Service (gRPC) running on :50054")
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}

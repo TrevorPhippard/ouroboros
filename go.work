@@ -9,5 +9,4 @@ use (
   ./services/notification-service
   ./services/post-service
   ./services/profile-service
-  ./services/user-service
 )

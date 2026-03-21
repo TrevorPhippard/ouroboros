@@ -4,39 +4,48 @@ schema {
   subscription: Subscription
 }
 
-type User {
-  id: ID!
-  mockData1: String!
-}
-
-type Todo {
-  id: ID!
-  mockData2: String!
-}
+# ------------------------
+# Queries
+# ------------------------
 
 type Query {
+  # Auth / Profile
   me: User
   user(id: ID!): User
   users(ids: [ID!]!): [User!]!
-  todos(ids: [ID!]!): [Todo!]!
-  post(id: ID!): Post
 
-  feed(limit: Int = 20, cursor: String): FeedConnection
-  notifications(limit: Int = 20): [Notification!]!
+  # Posts
+  post(id: ID!): Post
+  postsByIds(ids: [ID!]!): [Post!]!
+
+  # Feed & Notifications
+  feed(userId: ID!, limit: Int = 20, cursor: String): FeedResponse
+  notifications(userId: ID!, limit: Int = 20): [Notification!]!
 }
 
+# ------------------------
+# Mutations
+# ------------------------
+
 type Mutation {
+  # Post Service
   createPost(input: CreatePostInput!): Post!
   createComment(input: CreateCommentInput!): Comment!
 
-  followUser(userId: ID!): Boolean!
-  unfollowUser(userId: ID!): Boolean!
+  # Connection Service
+  followUser(followerId: ID!, followeeId: ID!): Boolean!
+  unfollowUser(followerId: ID!, followeeId: ID!): Boolean!
 
+  # Notification Service
   markNotificationRead(id: ID!): Boolean!
 }
 
+# ------------------------
+# Subscriptions
+# ------------------------
+
 type Subscription {
-  notificationReceived: Notification!
+  notificationReceived(userId: ID!): Notification!
 }
 
 # ------------------------
@@ -45,74 +54,67 @@ type Subscription {
 
 type User {
   id: ID!
-  username: String!
-  displayName: String
-  avatarUrl: String
-
-  bio: String
-
-  followersCount: Int!
-  followingCount: Int!
-
-  isFollowing: Boolean!
-
-  posts(limit: Int = 10): [Post!]!
+  email: String! # From Auth Service
+  username: String! # From Auth Service
+  displayName: String # From Profile Service
+  avatarUrl: String # From Profile Service
+  bio: String # From Profile Service
+  followersCount: Int! # From Connection Service
+  followingCount: Int! # From Connection Service
+  isFollowing: Boolean! # From Connection Service (Contextual)
+  posts(limit: Int = 10): [Post!]! # Resolved via Post Service
 }
 
 type Post {
   id: ID!
   content: String!
   createdAt: String!
+  authorId: ID!
 
+  # Resolved via Profile/Auth Service
   author: User!
 
+  # Resolved via Post Service
   comments(limit: Int = 10): [Comment!]!
-
-  likeCount: Int!
-  commentCount: Int!
 }
 
 type Comment {
   id: ID!
+  postId: ID!
+  authorId: ID!
   content: String!
   createdAt: String!
 
   author: User!
-  postId: ID!
 }
 
 type Notification {
   id: ID!
+  userId: ID!
   type: String!
-
-  actor: User!
+  actorId: ID!
   entityId: ID
-
   createdAt: String!
   read: Boolean!
+
+  # Optional: Resolve the actor profile
+  actor: User
 }
 
 # ------------------------
-# Feed (Pagination)
+# Feed & Pagination
 # ------------------------
 
 type FeedItem {
-  post: Post!
-}
-
-type FeedConnection {
-  edges: [FeedEdge!]!
-  pageInfo: PageInfo!
-}
-
-type FeedEdge {
+  postId: ID!
   cursor: String!
-  node: FeedItem!
+  # Resolved by Post Service using postId
+  post: Post
 }
 
-type PageInfo {
-  hasNextPage: Boolean!
-  endCursor: String
+type FeedResponse {
+  items: [FeedItem!]!
+  # Add PageInfo here if you uncomment common.proto in your Feed service
 }
 
 # ------------------------
@@ -120,10 +122,12 @@ type PageInfo {
 # ------------------------
 
 input CreatePostInput {
+  authorId: ID!
   content: String!
 }
 
 input CreateCommentInput {
+  authorId: ID!
   postId: ID!
   content: String!
 }

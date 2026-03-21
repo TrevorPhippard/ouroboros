@@ -12,33 +12,40 @@ import (
 )
 
 type feedServiceServer struct {
-	pb.UnimplementedService2Server
+	pb.UnimplementedFeedServiceServer
 }
 
-func (s *feedServiceServer) BatchGetTest2(ctx context.Context, req *pb.BatchRequest) (*pb.Test2BatchResponse, error) {
-	log.Printf("Feed Service: Fetching %d IDs", len(req.Ids))
+// GetFeed implements the main feed retrieval logic
+func (s *feedServiceServer) GetFeed(ctx context.Context, req *pb.GetFeedRequest) (*pb.GetFeedResponse, error) {
+	log.Printf("Feed Service: Generating feed for User ID: %s", req.UserId)
 
-	var items []*pb.Test2
-	for _, id := range req.Ids {
-		items = append(items, &pb.Test2{
-			Id:         id,
-			MockData_2: fmt.Sprintf("Feed Task Data for %s", id),
+	// Mocking some feed items.
+	// In a real scenario, this would involve calling the Connection service
+	// to get "following" IDs and then the Post service to get content.
+	var items []*pb.FeedItem
+	for i := 1; i <= 5; i++ {
+		items = append(items, &pb.FeedItem{
+			PostId: fmt.Sprintf("post_uuid_%d", i),
+			Cursor: fmt.Sprintf("cursor_val_%d", i),
 		})
 	}
 
-	return &pb.Test2BatchResponse{Items: items}, nil
+	return &pb.GetFeedResponse{
+		Items: items,
+	}, nil
 }
 
 func main() {
-	lis, err := net.Listen("tcp", ":50053")
+	// Shifted to :50055 to avoid conflicts with Auth (:50053) and Connection (:50054)
+	lis, err := net.Listen("tcp", ":50055")
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
 	s := grpc.NewServer()
-	pb.RegisterService2Server(s, &feedServiceServer{})
+	pb.RegisterFeedServiceServer(s, &feedServiceServer{})
 
-	log.Println("Feed Service (gRPC) running on :50053")
+	log.Println("Feed Service (gRPC) running on :50055")
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}

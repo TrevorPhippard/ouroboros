@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"time"
 
 	pb "ouroboros/proto/generated/notification"
 
@@ -12,33 +13,52 @@ import (
 )
 
 type notificationServiceServer struct {
-	pb.UnimplementedService2Server
+	pb.UnimplementedNotificationServiceServer
 }
 
-func (s *notificationServiceServer) BatchGetTest2(ctx context.Context, req *pb.BatchRequest) (*pb.Test2BatchResponse, error) {
-	log.Printf("Notification Service: Fetching %d IDs", len(req.Ids))
+// GetNotifications returns a list of notifications for a specific user
+func (s *notificationServiceServer) GetNotifications(ctx context.Context, req *pb.GetNotificationsRequest) (*pb.GetNotificationsResponse, error) {
+	log.Printf("Notification Service: Fetching up to %d notifications for User: %s", req.Limit, req.UserId)
 
-	var items []*pb.Test2
-	for _, id := range req.Ids {
-		items = append(items, &pb.Test2{
-			Id:         id,
-			MockData_2: fmt.Sprintf("Notification Task Data for %s", id),
+	// Mocking notifications
+	var notifications []*pb.Notification
+	for i := 1; i <= int(req.Limit); i++ {
+		notifications = append(notifications, &pb.Notification{
+			Id:        fmt.Sprintf("notif_uuid_%d", i),
+			UserId:    req.UserId,
+			Type:      "FOLLOW",
+			ActorId:   fmt.Sprintf("actor_%d", i),
+			EntityId:  fmt.Sprintf("entity_%d", i),
+			CreatedAt: time.Now().Format(time.RFC3339),
+			Read:      false,
 		})
 	}
 
-	return &pb.Test2BatchResponse{Items: items}, nil
+	return &pb.GetNotificationsResponse{
+		Notifications: notifications,
+	}, nil
+}
+
+// MarkAsRead updates the status of a specific notification
+func (s *notificationServiceServer) MarkAsRead(ctx context.Context, req *pb.MarkAsReadRequest) (*pb.MarkAsReadResponse, error) {
+	log.Printf("Notification Service: Marking notification %s as read", req.NotificationId)
+
+	return &pb.MarkAsReadResponse{
+		Success: true,
+	}, nil
 }
 
 func main() {
-	lis, err := net.Listen("tcp", ":50053")
+	// Port 50056 selected to avoid conflicts
+	lis, err := net.Listen("tcp", ":50056")
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
 	s := grpc.NewServer()
-	pb.RegisterService2Server(s, &notificationServiceServer{})
+	pb.RegisterNotificationServiceServer(s, &notificationServiceServer{})
 
-	log.Println("Notification Service (gRPC) running on :50053")
+	log.Println("Notification Service (gRPC) running on :50056")
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
