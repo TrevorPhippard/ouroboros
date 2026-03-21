@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package connection;
+
+option go_package = "ouroboros/proto/connection";
+
+service ConnectionService {
+  rpc FollowUser (FollowUserRequest) returns (FollowUserResponse);
+  rpc UnfollowUser (UnfollowUserRequest) returns (UnfollowUserResponse);
+
+  rpc GetFollowersCount (UserRequest) returns (CountResponse);
+  rpc GetFollowingCount (UserRequest) returns (CountResponse);
+
+  rpc IsFollowing (IsFollowingRequest) returns (IsFollowingResponse);
+}
+
+message UserRequest {
+  string user_id = 1;
+}
+
+message FollowUserRequest {
+  string follower_id = 1;
+  string followee_id = 2;
+}
+
+message FollowUserResponse {
+  bool success = 1;
+}
+
+message UnfollowUserRequest {
+  string follower_id = 1;
+  string followee_id = 2;
+}
+
+message UnfollowUserResponse {
+  bool success = 1;
+}
+
+message CountResponse {
+  int32 count = 1;
+}
+
+message IsFollowingRequest {
+  string follower_id = 1;
+  string followee_id = 2;
+}
+
+message IsFollowingResponse {
+  bool is_following = 1;
+}

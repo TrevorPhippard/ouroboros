@@ -6,23 +6,23 @@ import (
 	"log"
 	"net"
 
-	pb "ouroboros/proto"
+	pb "ouroboros/proto/generated/auth"
 
 	"google.golang.org/grpc"
 )
 
-type todoServiceServer struct {
-	pb.UnimplementedService2Server
+type authServiceServer struct {
+	pb.UnimplementedAuthServiceServer
 }
 
-func (s *todoServiceServer) BatchGetTest2(ctx context.Context, req *pb.BatchRequest) (*pb.Test2BatchResponse, error) {
-	log.Printf("Todo Service: Fetching %d IDs", len(req.Ids))
+func (s *authServiceServer) BatchGetTest2(ctx context.Context, req *pb.BatchRequest) (*pb.Test2BatchResponse, error) {
+	log.Printf("Auth Service: Fetching %d IDs", len(req.Ids))
 
 	var items []*pb.Test2
 	for _, id := range req.Ids {
 		items = append(items, &pb.Test2{
 			Id:         id,
-			MockData_2: fmt.Sprintf("Todo Task Data for %s", id),
+			MockData_2: fmt.Sprintf("Auth Task Data for %s", id),
 		})
 	}
 
@@ -36,9 +36,9 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	pb.RegisterService2Server(s, &todoServiceServer{})
+	pb.RegisterService2Server(s, &authServiceServer{})
 
-	log.Println("Todo Service (gRPC) running on :50053")
+	log.Println("Auth Service (gRPC) running on :50053")
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}

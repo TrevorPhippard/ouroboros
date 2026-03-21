@@ -1,3 +1,9 @@
+schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}
+
 type User {
   id: ID!
   mockData1: String!
@@ -9,6 +15,115 @@ type Todo {
 }
 
 type Query {
+  me: User
+  user(id: ID!): User
   users(ids: [ID!]!): [User!]!
   todos(ids: [ID!]!): [Todo!]!
+  post(id: ID!): Post
+
+  feed(limit: Int = 20, cursor: String): FeedConnection
+  notifications(limit: Int = 20): [Notification!]!
+}
+
+type Mutation {
+  createPost(input: CreatePostInput!): Post!
+  createComment(input: CreateCommentInput!): Comment!
+
+  followUser(userId: ID!): Boolean!
+  unfollowUser(userId: ID!): Boolean!
+
+  markNotificationRead(id: ID!): Boolean!
+}
+
+type Subscription {
+  notificationReceived: Notification!
+}
+
+# ------------------------
+# Core Types
+# ------------------------
+
+type User {
+  id: ID!
+  username: String!
+  displayName: String
+  avatarUrl: String
+
+  bio: String
+
+  followersCount: Int!
+  followingCount: Int!
+
+  isFollowing: Boolean!
+
+  posts(limit: Int = 10): [Post!]!
+}
+
+type Post {
+  id: ID!
+  content: String!
+  createdAt: String!
+
+  author: User!
+
+  comments(limit: Int = 10): [Comment!]!
+
+  likeCount: Int!
+  commentCount: Int!
+}
+
+type Comment {
+  id: ID!
+  content: String!
+  createdAt: String!
+
+  author: User!
+  postId: ID!
+}
+
+type Notification {
+  id: ID!
+  type: String!
+
+  actor: User!
+  entityId: ID
+
+  createdAt: String!
+  read: Boolean!
+}
+
+# ------------------------
+# Feed (Pagination)
+# ------------------------
+
+type FeedItem {
+  post: Post!
+}
+
+type FeedConnection {
+  edges: [FeedEdge!]!
+  pageInfo: PageInfo!
+}
+
+type FeedEdge {
+  cursor: String!
+  node: FeedItem!
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  endCursor: String
+}
+
+# ------------------------
+# Inputs
+# ------------------------
+
+input CreatePostInput {
+  content: String!
+}
+
+input CreateCommentInput {
+  postId: ID!
+  content: String!
 }

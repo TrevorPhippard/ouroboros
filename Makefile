@@ -11,9 +11,11 @@ infra-down:
 # Generates Go code from gRPC proto files
 proto:
 	@echo "Generating gRPC code..."
-	protoc --go_out=. --go_opt=paths=source_relative \
-	    --go-grpc_out=. --go-grpc_opt=paths=source_relative \
-	    proto/*.proto
+		mkdir -p proto/generated
+		protoc --proto_path=proto \
+				--go_out=proto/generated --go_opt=paths=source_relative \
+				--go-grpc_out=proto/generated --go-grpc_opt=paths=source_relative \
+				$(shell find proto -name "*.proto")
 
 
 # Generate graphql schema

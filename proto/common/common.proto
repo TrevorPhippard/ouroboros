@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package common;
+
+option go_package = "ouroboros/proto/common";
+
+message Pagination {
+  int32 limit = 1;
+  string cursor = 2;
+}
+
+message PageInfo {
+  bool has_next_page = 1;
+  string end_cursor = 2;
+}

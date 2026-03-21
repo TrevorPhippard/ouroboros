@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package profile;
+
+option go_package = "ouroboros/proto/profile";
+
+service ProfileService {
+  rpc GetProfile (GetProfileRequest) returns (Profile);
+  rpc GetProfilesByUserIds (GetProfilesByUserIdsRequest) returns (GetProfilesByUserIdsResponse);
+}
+
+message GetProfileRequest {
+  string user_id = 1;
+}
+
+message GetProfilesByUserIdsRequest {
+  repeated string user_ids = 1;
+}
+
+message GetProfilesByUserIdsResponse {
+  repeated Profile profiles = 1;
+}
+
+message Profile {
+  string user_id = 1;
+  string display_name = 2;
+  string avatar_url = 3;
+  string bio = 4;
+}

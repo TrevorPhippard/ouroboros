@@ -1,7 +1,12 @@
 package graph
 
 import (
-	pb "ouroboros/proto" // Adjust this to match your actual proto module path
+	authPb "ouroboros/proto/generated/auth"
+	connectionPb "ouroboros/proto/generated/connection"
+	feedPb "ouroboros/proto/generated/feed"
+	notificationPb "ouroboros/proto/generated/notification"
+	postPb "ouroboros/proto/generated/post"
+	profilePb "ouroboros/proto/generated/profile"
 )
 
 // This file will not be regenerated automatically.
@@ -9,6 +14,10 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	UserServiceClient pb.Service1Client
-	TodoServiceClient pb.Service2Client
+	ConnectionServiceClient connectionPb.ConnectionServiceClient
+	AuthServiceClient       authPb.AuthServiceClient
+	FeedServiceClient       feedPb.FeedServiceClient
+	NotificationServiceClient notificationPb.NotificationServiceClient
+	PostServiceClient       postPb.PostServiceClient
+	ProfileServiceClient    profilePb.ProfileServiceClient
 }

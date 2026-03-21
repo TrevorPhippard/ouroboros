@@ -9,7 +9,7 @@ import (
 	"api-gateway/graph/model"
 	"context"
 	"fmt"
-	pb "ouroboros/proto"
+	pb "ouroboros/proto/generated/" // Adjust this to match your actual proto module path
 )
 
 // Users is the resolver for the users field.

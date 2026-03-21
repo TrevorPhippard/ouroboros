@@ -3,7 +3,11 @@ go 1.25.3
 use (
   .
   ./services/api-gateway
+  ./services/auth-service
+  ./services/connection-service
+  ./services/feed-service
+  ./services/notification-service
+  ./services/post-service
+  ./services/profile-service
   ./services/user-service
-  ./services/todo-service
-
 )

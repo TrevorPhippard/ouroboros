@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package auth;
+
+option go_package = "ouroboros/proto/auth";
+
+service AuthService {
+  rpc GetUser (GetUserRequest) returns (User);
+  rpc GetUsersByIds (GetUsersByIdsRequest) returns (GetUsersByIdsResponse);
+}
+
+message GetUserRequest {
+  string id = 1;
+}
+
+message GetUsersByIdsRequest {
+  repeated string ids = 1;
+}
+
+message GetUsersByIdsResponse {
+  repeated User users = 1;
+}
+
+message User {
+  string id = 1;
+  string email = 2;
+  string username = 3;
+}
