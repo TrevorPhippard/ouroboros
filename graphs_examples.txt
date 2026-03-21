@@ -1,3 +1,5 @@
+status:PASS
+
 query GetUserProfile {
   user(id: "user_99") {
     id
@@ -9,10 +11,13 @@ query GetUserProfile {
   }
 }
 
+status:UNTESTED
 
 mutation FollowSomeone {
   followUser(followerId: "me_123", followeeId: "them_456")
 }
+
+status:PASS
 
 query CheckSocialStats {
   user(id: "me_123") {
@@ -22,6 +27,8 @@ query CheckSocialStats {
     isFollowing # Requires context in your resolver
   }
 }
+
+status:UNTESTED
 
 mutation CreateNewPost {
   createPost(input: {
@@ -36,6 +43,8 @@ mutation CreateNewPost {
     }
   }
 }
+
+status:FAIL
 
 query GetSpecificPost {
   post(id: "post_uuid_1") {
@@ -53,6 +62,8 @@ query GetSpecificPost {
   }
 }
 
+status:PASS
+
 query GetMyFeed {
   feed(userId: "user_01", limit: 10) {
     items {
@@ -69,6 +80,8 @@ query GetMyFeed {
   }
 }
 
+status:FAIL
+
 query MyNotifications {
   notifications(userId: "user_01", limit: 10) {
     id
@@ -80,6 +93,8 @@ query MyNotifications {
     }
   }
 }
+
+status:UNTESTED
 
 mutation ClearNotification {
   markNotificationRead(id: "notif_uuid_1")
