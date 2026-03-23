@@ -46,7 +46,7 @@ mutation CreateNewPost {
 
 status:FAIL
 
-query GetSpecificPost {
+query GetPost {
   post(id: "post_uuid_1") {
     content
     author {

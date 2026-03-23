@@ -1,86 +1,74 @@
 package main
 
 import (
-	"context"
-	"fmt"
 	"log"
 	"net"
+	"os"
 	"time"
 
 	pb "ouroboros/proto/generated/post"
 
 	"google.golang.org/grpc"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
-type postServiceServer struct {
-	pb.UnimplementedPostServiceServer
+// DB models — renamed so they do not collide with pb.Post / pb.Comment
+
+func (DBPost) TableName() string {
+	return "posts"
 }
 
-func (s *postServiceServer) CreatePost(ctx context.Context, req *pb.CreatePostRequest) (*pb.Post, error) {
-	log.Printf("Post Service: Creating post for Author: %s", req.AuthorId)
-
-	return &pb.Post{
-		Id:        "new-post-uuid",
-		AuthorId:  req.AuthorId,
-		Content:   req.Content,
-		CreatedAt: time.Now().Format(time.RFC3339),
-	}, nil
+func (DBComment) TableName() string {
+	return "comments"
 }
 
-func (s *postServiceServer) GetPost(ctx context.Context, req *pb.GetPostRequest) (*pb.Post, error) {
-	log.Printf("Post Service: Fetching Post ID: %s", req.Id)
+func connectDB(dbURL string) *gorm.DB {
+	var db *gorm.DB
+	var err error
 
-	return &pb.Post{
-		Id:        req.Id,
-		AuthorId:  "mock-author-id",
-		Content:   "This is a mock post content",
-		CreatedAt: time.Now().Format(time.RFC3339),
-	}, nil
-}
+	for i := 0; i < 10; i++ {
+		db, err = gorm.Open(postgres.Open(dbURL), &gorm.Config{})
+		if err == nil {
+			return db
+		}
 
-func (s *postServiceServer) GetPostsByIds(ctx context.Context, req *pb.GetPostsByIdsRequest) (*pb.GetPostsByIdsResponse, error) {
-	log.Printf("Post Service: Batch fetching %d posts", len(req.Ids))
-
-	var posts []*pb.Post
-	for _, id := range req.Ids {
-		posts = append(posts, &pb.Post{
-			Id:        id,
-			AuthorId:  "mock-author-id",
-			Content:   fmt.Sprintf("Content for post %s", id),
-			CreatedAt: time.Now().Format(time.RFC3339),
-		})
+		log.Println("Waiting for DB...")
+		time.Sleep(2 * time.Second)
 	}
 
-	return &pb.GetPostsByIdsResponse{Posts: posts}, nil
-}
-
-func (s *postServiceServer) GetCommentsByPostId(ctx context.Context, req *pb.GetCommentsRequest) (*pb.GetCommentsResponse, error) {
-	log.Printf("Post Service: Fetching comments for Post: %s", req.PostId)
-
-	var comments []*pb.Comment
-	comments = append(comments, &pb.Comment{
-		Id:        "comment-1",
-		PostId:    req.PostId,
-		AuthorId:  "commenter-id",
-		Content:   "Great post!",
-		CreatedAt: time.Now().Format(time.RFC3339),
-	})
-
-	return &pb.GetCommentsResponse{Comments: comments}, nil
+	log.Fatal("Failed to connect to DB:", err)
+	return nil
 }
 
 func main() {
-	// Port 50057 to keep the Ouroboros service map unique
+
+	dbURL := os.Getenv("DB_URL")
+	if dbURL == "" {
+		log.Fatal("DB_URL environment variable is not set")
+	}
+
+	db := connectDB(dbURL)
+
+	log.Println("Connected to post_db")
+
+	if err := db.AutoMigrate(&DBPost{}, &DBComment{}); err != nil {
+		log.Fatalf("migration failed: %v", err)
+	}
+
+	seedDB(db)
+
 	lis, err := net.Listen("tcp", ":50057")
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	s := grpc.NewServer()
-	pb.RegisterPostServiceServer(s, &postServiceServer{})
+	server := grpc.NewServer()
+	pb.RegisterPostServiceServer(server, &PostServiceServer{DB: db})
 
-	log.Println("Post Service (gRPC) running on :50057")
-	if err := s.Serve(lis); err != nil {
+	log.Println("Post Service running on :50057")
+
+	if err := server.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
 }

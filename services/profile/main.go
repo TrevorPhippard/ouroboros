@@ -1,52 +1,54 @@
 package main
 
 import (
-	"context"
-	"fmt"
 	"log"
 	"net"
+	"os"
+	"time"
 
 	pb "ouroboros/proto/generated/profile"
 
 	"google.golang.org/grpc"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
-type profileServiceServer struct {
-	pb.UnimplementedProfileServiceServer
-}
 
-// GetProfile fetches a single user's profile information
-func (s *profileServiceServer) GetProfile(ctx context.Context, req *pb.GetProfileRequest) (*pb.Profile, error) {
-	log.Printf("Profile Service: Fetching profile for User: %s", req.UserId)
+func connectDB(dbURL string) *gorm.DB {
+	var db *gorm.DB
+	var err error
 
-	return &pb.Profile{
-		UserId:      req.UserId,
-		DisplayName: fmt.Sprintf("User %s", req.UserId),
-		AvatarUrl:   fmt.Sprintf("https://api.dicebear.com/7.x/avataaars/svg?seed=%s", req.UserId),
-		Bio:         "This is a mock bio for the Ouroboros social network.",
-	}, nil
-}
+	for i := 0; i < 10; i++ {
+		db, err = gorm.Open(postgres.Open(dbURL), &gorm.Config{})
+		if err == nil {
+			return db
+		}
 
-// GetProfilesByUserIds handles batch profile lookups
-func (s *profileServiceServer) GetProfilesByUserIds(ctx context.Context, req *pb.GetProfilesByUserIdsRequest) (*pb.GetProfilesByUserIdsResponse, error) {
-	log.Printf("Profile Service: Batch fetching %d profiles", len(req.UserIds))
-
-	var profiles []*pb.Profile
-	for _, id := range req.UserIds {
-		profiles = append(profiles, &pb.Profile{
-			UserId:      id,
-			DisplayName: fmt.Sprintf("User %s", id),
-			AvatarUrl:   fmt.Sprintf("https://api.dicebear.com/7.x/avataaars/svg?seed=%s", id),
-			Bio:         "I am a user in the Ouroboros microservices ecosystem.",
-		})
+		log.Println("Waiting for DB...")
+		time.Sleep(2 * time.Second)
 	}
 
-	return &pb.GetProfilesByUserIdsResponse{
-		Profiles: profiles,
-	}, nil
+	log.Fatal("Failed to connect to DB:", err)
+	return nil
 }
 
 func main() {
+
+
+	dbURL := os.Getenv("DB_URL")
+	if dbURL == "" {
+		log.Fatal("DB_URL environment variable is not set")
+	}
+
+	db := connectDB(dbURL)
+
+	log.Println("Connected to post_db")
+
+	if err := db.AutoMigrate(&Profile{}); err != nil {
+		log.Fatalf("migration failed: %v", err)
+	}
+
+	seedDB(db)
 	// Port 50058 selected to maintain uniqueness in the cluster
 	lis, err := net.Listen("tcp", ":50058")
 	if err != nil {

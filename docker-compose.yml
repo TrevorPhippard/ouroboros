@@ -1,8 +1,59 @@
 version: "3.8"
-
+#
 services:
   # ==========================================
-  # DATABASES (Unchanged)
+  # KAFKA (KRaft Mode - No Zookeeper)
+  # ==========================================
+  # kafka:
+  #   image: confluentinc/cp-kafka:7.8.0
+  #   container_name: kafka
+  #   hostname: kafka
+  #   ports:
+  #     - "9092:9092"
+  #     - "29092:29092"
+  #   environment:
+  #     # ---- KRaft Core ----
+  #     KAFKA_PROCESS_ROLES: broker,controller
+  #     KAFKA_NODE_ID: 1
+  #     CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+  #     KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+  #     KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+
+  #     # ---- Listeners (SINGLE LINE — IMPORTANT) ----
+  #     KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,PLAINTEXT_HOST://0.0.0.0:29092
+  #     KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+  #     KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+  #     KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+  #     # ---- Single Node Safe Settings ----
+  #     KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+  #     KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+  #     KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
+  #   volumes:
+  #     - kafka_data:/var/lib/kafka/data
+
+  #   restart: unless-stopped
+
+  # ==========================================
+  # CACHE
+  # ==========================================
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: ouroboros_redis
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
+  #   command: redis-server --appendonly yes
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 5
+
+  # ==========================================
+  # DATABASES
   # ==========================================
   postgres:
     image: postgres:15-alpine
@@ -92,6 +143,8 @@ services:
     container_name: ouroboros_post
     ports:
       - "50057:50057"
+    environment:
+      - DB_URL=postgres://admin:password@postgres:5432/ouroboros?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
@@ -105,6 +158,8 @@ services:
     container_name: ouroboros_profile
     ports:
       - "50058:50058"
+    environment:
+      - DB_URL=postgres://admin:password@postgres:5432/ouroboros?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
