@@ -12,6 +12,7 @@ import (
 	authpb "ouroboros/proto/generated/auth"
 	connpb "ouroboros/proto/generated/connection"
 	feedpb "ouroboros/proto/generated/feed"
+	notificationpb "ouroboros/proto/generated/notification"
 	postpb "ouroboros/proto/generated/post"
 	profilepb "ouroboros/proto/generated/profile"
 )
@@ -34,10 +35,6 @@ func (r *mutationResolver) CreatePost(ctx context.Context, input model.CreatePos
 	}, nil
 }
 
-// CreateComment is the resolver for the createComment field.
-func (r *mutationResolver) CreateComment(ctx context.Context, input model.CreateCommentInput) (*model.Comment, error) {
-	panic(fmt.Errorf("not implemented: CreateComment - createComment"))
-}
 
 // FollowUser is the resolver for the followUser mutation.
 func (r *mutationResolver) FollowUser(ctx context.Context, followerID string, followeeID string) (bool, error) {
@@ -54,17 +51,42 @@ func (r *mutationResolver) FollowUser(ctx context.Context, followerID string, fo
 
 // UnfollowUser is the resolver for the unfollowUser field.
 func (r *mutationResolver) UnfollowUser(ctx context.Context, followerID string, followeeID string) (bool, error) {
-	panic(fmt.Errorf("not implemented: UnfollowUser - unfollowUser"))
+	res, err := r.ConnectionClient.UnfollowUser(ctx, &connpb.UnfollowUserRequest{
+		FollowerId: followerID,
+		FolloweeId: followeeID,
+	})
+	if err != nil {
+		return false, fmt.Errorf("failed to unfollow user: %w", err)
+	}
+
+	return res.Success, nil
 }
 
 // MarkNotificationRead is the resolver for the markNotificationRead field.
 func (r *mutationResolver) MarkNotificationRead(ctx context.Context, id string) (bool, error) {
-	panic(fmt.Errorf("not implemented: MarkNotificationRead - markNotificationRead"))
+	// NOTE: You will need a NotificationClient added to your Resolver struct
+	res, err := r.NotificationClient.MarkAsRead(ctx, &notificationpb.MarkAsReadRequest{
+		NotificationId: id,
+	})
+	if err != nil {
+		return false, fmt.Errorf("failed to mark notification as read: %w", err)
+	}
+
+	return res.Success, nil
 }
 
 // Me is the resolver for the me field.
 func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
-	panic(fmt.Errorf("not implemented: Me - me"))
+		panic(fmt.Errorf("not implemented: Me - me"))
+
+	// NOTE: You need to implement auth middleware to inject the user ID into the context
+	// userID, ok := ctx.Value("userID").(string)
+	// if !ok || userID == "" {
+	// 	return nil, fmt.Errorf("unauthorized: user not found in context")
+	// }
+
+	// // Re-use your existing User resolver logic!
+	// return r.User(ctx, userID)
 }
 
 // User is the resolver for the user query.
@@ -94,19 +116,63 @@ func (r *queryResolver) User(ctx context.Context, id string) (*model.User, error
 
 // Users is the resolver for the users field.
 func (r *queryResolver) Users(ctx context.Context, ids []string) ([]*model.User, error) {
-	panic(fmt.Errorf("not implemented: Users - users"))
+	// Note: Iterating like this is an N+1 problem.
+	// If your gRPC services support batch fetching (e.g., GetUsers), you should use that instead.
+	var users []*model.User
+	for _, id := range ids {
+		user, err := r.User(ctx, id)
+		if err != nil {
+			// Decide if you want to fail the whole query or just skip/return null for this user
+			continue
+		}
+		users = append(users, user)
+	}
+	return users, nil
 }
 
 // Post is the resolver for the post field.
 func (r *queryResolver) Post(ctx context.Context, id string) (*model.Post, error) {
-	panic(fmt.Errorf("not implemented: Post - post"))
+
+	req := &postpb.GetPostRequest{
+		Id: id,
+	}
+
+	res, err := r.PostClient.GetPost(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch post: %w", err)
+	}
+
+	return &model.Post{
+		ID:      res.Id,
+		Content:   res.Content,
+		CreatedAt: res.CreatedAt,
+		AuthorID:  res.AuthorId,
+		Author:    &model.User{ID: res.AuthorId},
+	}, nil
 }
 
 // PostsByIds is the resolver for the postsByIds field.
-func (r *queryResolver) PostsByIds(ctx context.Context, ids []string) ([]*model.Post, error) {
-	panic(fmt.Errorf("not implemented: PostsByIds - postsByIds"))
-}
+// func (r *queryResolver) PostsByIds(ctx context.Context, ids []string) ([]*model.Post, error) {
+// 	// Assuming your postpb has a batch fetch endpoint
+// 	res, err := r.PostClient.GetPostsByIds()(ctx, &postpb.GetPostsByIdsRequest{
+// 		Ids: ids,
+// 	})
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to fetch posts: %w", err)
+// 	}
 
+// 	var posts []*model.Post
+// 	for _, p := range res.Posts {
+// 		posts = append(posts, &model.Post{
+// 			ID:        p.Id,
+// 			Content:   p.Content,
+// 			CreatedAt: p.CreatedAt,
+// 			AuthorID:  p.AuthorId,
+// 			Author:    &model.User{ID: p.AuthorId},
+// 		})
+// 	}
+// 	return posts, nil
+// }
 // Feed is the resolver for the feed query.
 func (r *queryResolver) Feed(ctx context.Context, userID string, limit *int32, cursor *string) (*model.FeedResponse, error) {
 	// Call Feed Service
@@ -128,13 +194,48 @@ func (r *queryResolver) Feed(ctx context.Context, userID string, limit *int32, c
 
 // Notifications is the resolver for the notifications field.
 func (r *queryResolver) Notifications(ctx context.Context, userID string, limit *int32) ([]*model.Notification, error) {
-	panic(fmt.Errorf("not implemented: Notifications - notifications"))
+	// NOTE: Requires a NotificationClient
+	var reqLimit int32 = 20 // default limit
+	if limit != nil {
+		reqLimit = *limit
+	}
+
+	res, err := r.NotificationClient.GetNotifications(ctx, &notificationpb.GetNotificationsRequest{
+		UserId: userID,
+		Limit:  reqLimit,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch notifications: %w", err)
+	}
+
+	var notifications []*model.Notification
+	for _, n := range res.Notifications {
+		notifications = append(notifications, &model.Notification{
+			ID:        n.Id,
+			Read:    n.Read,
+			CreatedAt: n.CreatedAt,
+		})
+	}
+	return notifications, nil
 }
 
-// NotificationReceived is the resolver for the notificationReceived field.
+// PostsByIds is the resolver for the postsByIds field.
+func (r *queryResolver) PostsByIds(ctx context.Context, ids []string) ([]*model.Post, error) {
+	panic(fmt.Errorf("not implemented: PostsByIds - postsByIds"))
+}
+
 func (r *subscriptionResolver) NotificationReceived(ctx context.Context, userID string) (<-chan *model.Notification, error) {
 	panic(fmt.Errorf("not implemented: NotificationReceived - notificationReceived"))
 }
+
+func (r *mutationResolver) CreateComment(ctx context.Context, input model.CreateCommentInput) (*model.Comment, error) {
+	panic(fmt.Errorf("not implemented: CreateComment - createComment"))
+}
+
+type mutationResolver struct{ *Resolver }
+type queryResolver struct{ *Resolver }
+type subscriptionResolver struct{ *Resolver }
+
 
 // Mutation returns MutationResolver implementation.
 func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
@@ -144,7 +245,3 @@ func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
 // Subscription returns SubscriptionResolver implementation.
 func (r *Resolver) Subscription() SubscriptionResolver { return &subscriptionResolver{r} }
-
-type mutationResolver struct{ *Resolver }
-type queryResolver struct{ *Resolver }
-type subscriptionResolver struct{ *Resolver }

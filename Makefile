@@ -21,7 +21,7 @@ proto:
 # Generate graphql schema
 graphql:
 	@echo "Generating GraphQL schema..."
-	go run github.com/99designs/gqlgen generate
+	go run github.com/99designs/gqlgen generate --config services/api-gateway/gqlgen.yml
 
 # Syncs Go dependencies across the workspace
 tidy:

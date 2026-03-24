@@ -4,7 +4,7 @@ import (
 	authpb "ouroboros/proto/generated/auth"
 	connpb "ouroboros/proto/generated/connection"
 	feedpb "ouroboros/proto/generated/feed"
-	notifpb "ouroboros/proto/generated/notification"
+	notificationpb "ouroboros/proto/generated/notification"
 	postpb "ouroboros/proto/generated/post"
 	profilepb "ouroboros/proto/generated/profile"
 )
@@ -17,7 +17,7 @@ type Resolver struct {
 	AuthClient         authpb.AuthServiceClient
 	ConnectionClient   connpb.ConnectionServiceClient
 	FeedClient         feedpb.FeedServiceClient
-	NotificationClient notifpb.NotificationServiceClient
+	NotificationClient notificationpb.NotificationServiceClient
 	PostClient         postpb.PostServiceClient
 	ProfileClient      profilepb.ProfileServiceClient
 }

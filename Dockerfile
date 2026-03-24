@@ -26,7 +26,7 @@ COPY . .
 # 3. Build the specific service
 ARG SERVICE_DIR
 # We use the full path to the main.go based on your structure
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app/bin/service ./services/${SERVICE_DIR}/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/bin/service ./services/${SERVICE_DIR}
 
 # ==========================================
 # Stage 2: The Production Image
