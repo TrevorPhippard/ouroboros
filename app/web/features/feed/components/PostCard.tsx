@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils"
 import { formatDistanceToNow } from "date-fns"
 import Link from "next/link"
 
-export const PostCard = ({ post }: { post: any }) => {
+export const PostCard = ({ post }: { post: PostType }) => {
   const { mutate: likePost } = useLikePost()
   const [isExpanded, setIsExpanded] = useState(false)
 
