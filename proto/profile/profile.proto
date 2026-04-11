@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package profile;
+
+option go_package = "ouroboros/proto/profile";
+
+service ProfileService {
+  rpc GetProfile (GetProfileRequest) returns (Profile);
+  rpc GetProfilesByUserIds (GetProfilesByUserIdsRequest) returns (GetProfilesByUserIdsResponse);
+  rpc UpdateProfile (UpdateProfileRequest) returns (UpdateProfileResponse);
+}
+
+message GetProfileRequest {
+  string user_id = 1;
+}
+
+message GetProfilesByUserIdsRequest {
+  repeated string user_ids = 1;
+}
+
+message GetProfilesByUserIdsResponse {
+  repeated Profile profiles = 1;
+}
+
+message UpdateProfileRequest {
+  string user_id = 1;
+  string headline = 2;
+  string about = 3;
+}
+
+message UpdateProfileResponse {
+  Profile profile = 1;
+}
+
+message Profile {
+  string id = 1;
+  string user_id = 2;
+  string headline = 3;
+  string about = 4;
+
+  // Keep the old fields if other parts of the system still use them.
+  string display_name = 5;
+  string avatar_url = 6;
+  repeated Experience experiences = 7;
+  string bio = 8;
+}
+
+message Experience {
+  string id = 1;
+  string title = 2;
+  string company = 3;
+  string start_date = 4;
+  string end_date = 5;
+  string description = 6;
+}

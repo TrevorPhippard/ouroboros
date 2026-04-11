@@ -1,0 +1,200 @@
+schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}
+
+# ------------------------
+# Queries
+# ------------------------
+
+type Query {
+  # Auth / Profile
+  me: User
+  user(id: ID!): User
+  users(ids: [ID!]!): [User!]!
+
+  # Posts
+  post(id: ID!): Post
+  postsByIds(ids: [ID!]!): [Post!]!
+
+  # Feed & Notifications
+  feed(userId: ID!, limit: Int = 20, cursor: String): FeedResponse
+  notifications(userId: ID!, limit: Int = 20): [Notification!]!
+  recommendations: [User!]!
+}
+
+# ------------------------
+# Mutations
+# ------------------------
+
+type Mutation {
+  # Auth
+  signUp(input: SignUpInput!): User!
+  signIn(input: SignInInput!): AuthPayload!
+  signOut: SignOutResponse!
+
+  # Profile
+  updateProfile(userId: ID!, input: UpdateProfileInput!): Profile!
+
+  # Post Service
+  createPost(input: CreatePostInput!): Post!
+  createComment(input: CreateCommentInput!): Comment!
+  likePost(postId: ID!): Post!
+
+  # Connection Service
+  sendConnect(userId: ID!): ConnectResponse!
+  #   followUser(followerId: ID!, followeeId: ID!): Boolean!
+  # unfollowUser(followerId: ID!, followeeId: ID!): Boolean!
+
+  # Notification Service
+  markNotificationRead(id: ID!): Boolean!
+}
+
+# ------------------------
+# Subscriptions
+# ------------------------
+
+type Subscription {
+  notificationReceived(userId: ID!): Notification!
+}
+
+# ------------------------
+# Core Types
+# ------------------------
+
+type User {
+  id: ID!
+  email: String! # From Auth Service
+  username: String! # From Auth Service
+  displayName: String # From Profile Service
+  avatarUrl: String # From Profile Service
+  bio: String # From Profile Service
+  followersCount: Int! # From Connection Service
+  followingCount: Int! # From Connection Service
+  isFollowing: Boolean! # From Connection Service (Contextual)
+  posts(limit: Int = 10): [Post!]! # Resolved via Post Service
+}
+
+type Profile {
+  id: ID!
+  headline: String
+  about: String
+  experiences: [Experience!]!
+}
+
+type Experience {
+  id: ID!
+  title: String!
+  company: String!
+  startDate: String!
+  endDate: String
+}
+
+type Post {
+  id: ID!
+  content: String!
+  createdAt: String!
+  authorId: ID!
+
+  # Resolved via Profile/Auth Service
+  author: User!
+
+  # Resolved via Post Service
+  comments(limit: Int = 10): [Comment!]!
+}
+
+type Comment {
+  id: ID!
+  postId: ID!
+  authorId: ID!
+  content: String!
+  createdAt: String!
+
+  author: User!
+}
+
+type Notification {
+  id: ID!
+  userId: ID!
+  type: String!
+  actorId: ID!
+  entityId: ID
+  createdAt: String!
+  read: Boolean!
+
+  # Optional: Resolve the actor profile
+  actor: User
+}
+
+# ------------------------
+# Feed & Pagination
+# ------------------------
+
+type FeedItem {
+  postId: ID!
+  cursor: String!
+  # Resolved by Post Service using postId
+  post: Post
+}
+
+type FeedResponse {
+  items: [FeedItem!]!
+  # Add PageInfo here if you uncomment common.proto in your Feed service
+}
+
+# ------------------------
+# Auth Types
+# ------------------------
+
+type AuthPayload {
+  token: String!
+  user: User!
+}
+
+type SignOutResponse {
+  success: Boolean!
+}
+
+# ------------------------
+# Connection Types
+# ------------------------
+
+type ConnectResponse {
+  success: Boolean!
+}
+
+# ------------------------
+# Inputs
+# ------------------------
+
+input SignUpInput {
+  email: String!
+  password: String!
+  displayName: String!
+}
+
+input SignInInput {
+  email: String!
+  password: String!
+}
+
+input UpdateProfileInput {
+  headline: String
+  about: String
+}
+
+# ------------------------
+# Inputs
+# ------------------------
+
+input CreatePostInput {
+  authorId: ID!
+  content: String!
+}
+
+input CreateCommentInput {
+  authorId: ID!
+  postId: ID!
+  content: String!
+}

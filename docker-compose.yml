@@ -1,0 +1,211 @@
+version: "3.8"
+#
+services:
+  # ==========================================
+  # KAFKA (KRaft Mode - No Zookeeper)
+  # ==========================================
+  # kafka:
+  #   image: confluentinc/cp-kafka:7.8.0
+  #   container_name: kafka
+  #   hostname: kafka
+  #   ports:
+  #     - "9092:9092"
+  #     - "29092:29092"
+  #   environment:
+  #     # ---- KRaft Core ----
+  #     KAFKA_PROCESS_ROLES: broker,controller
+  #     KAFKA_NODE_ID: 1
+  #     CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+  #     KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+  #     KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+
+  #     # ---- Listeners (SINGLE LINE — IMPORTANT) ----
+  #     KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,PLAINTEXT_HOST://0.0.0.0:29092
+  #     KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+  #     KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+  #     KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+  #     # ---- Single Node Safe Settings ----
+  #     KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+  #     KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+  #     KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
+  #   volumes:
+  #     - kafka_data:/var/lib/kafka/data
+
+  #   restart: unless-stopped
+
+  # ==========================================
+  # CACHE
+  # ==========================================
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: ouroboros_redis
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
+  #   command: redis-server --appendonly yes
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 5
+
+  # ==========================================
+  # DATABASES
+  # ==========================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: ouroboros_postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ouroboros
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d ouroboros"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  neo4j:
+    image: neo4j:5
+    container_name: ouroboros_neo4j
+    environment:
+      NEO4J_AUTH: neo4j/password
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "password", "RETURN 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  # ================================
+  # DB Admin Tools
+  # ================================
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8083:80"
+    depends_on:
+      - postgres
+
+  # ==========================================
+  # gRPC MICROSERVICES (Now built via Dockerfile)
+  # ==========================================
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: auth
+    container_name: ouroboros_auth
+    ports:
+      - "50053:50053"
+
+  connection-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: connection
+    container_name: ouroboros_connection
+    ports:
+      - "50054:50054"
+    depends_on:
+      neo4j:
+        condition: service_healthy
+
+  feed-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: feed
+    container_name: ouroboros_feed
+    ports:
+      - "50055:50055"
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: notification
+    container_name: ouroboros_notification
+    ports:
+      - "50056:50056"
+
+  post-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: post
+    container_name: ouroboros_post
+    ports:
+      - "50057:50057"
+    environment:
+      - DB_URL=postgres://admin:password@postgres:5432/ouroboros?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  profile-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: profile
+    container_name: ouroboros_profile
+    ports:
+      - "50058:50058"
+    environment:
+      - DB_URL=postgres://admin:password@postgres:5432/ouroboros?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ==========================================
+  # API GATEWAY
+  # ==========================================
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: api-gateway
+    container_name: ouroboros_gateway
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - AUTH_SERVICE_URL=ouroboros_auth:50053
+      - CONNECTION_SERVICE_URL=ouroboros_connection:50054
+      - FEED_SERVICE_URL=ouroboros_feed:50055
+      - NOTIFICATION_SERVICE_URL=ouroboros_notification:50056
+      - POST_SERVICE_URL=ouroboros_post:50057
+      - PROFILE_SERVICE_URL=ouroboros_profile:50058
+    depends_on:
+      - auth-service
+      - connection-service
+      - feed-service
+      - notification-service
+      - post-service
+      - profile-service
+
+volumes:
+  pg_data:
+  neo4j_data:
