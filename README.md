@@ -1,6 +1,6 @@
 # ouroboros
 
-A modern social networking platform built with a Next.js frontend and Go microservices, connected through a GraphQL API gateway and gRPC service-to-service communication.
+A modern social networking platform.
 
 The application supports core social workflows including authentication, profile management, posting, feed retrieval, recommendations, connect requests, and notifications. The GraphQL operations supplied for this draft are:
 
