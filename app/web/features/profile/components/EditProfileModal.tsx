@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Camera, X } from "lucide-react"
-import { profileSchema, ProfileFormValues } from "../schemas"
+import { ProfileType, profileSchema } from "../schemas"
 import { useUpdateProfile } from "../hooks/useUpdateProfile"
 import { useState } from "react"
 
@@ -11,7 +11,7 @@ export const EditProfileModal = ({
   initialData,
   onClose,
 }: {
-  initialData: any
+  initialData: ProfileType
   onClose: () => void
 }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -21,12 +21,12 @@ export const EditProfileModal = ({
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<ProfileFormValues>({
+  } = useForm<ProfileType>({
     resolver: zodResolver(profileSchema),
     defaultValues: initialData,
   })
 
-  const onSubmit = async (data: ProfileFormValues) => {
+  const onSubmit = async (data: ProfileType) => {
     await updateProfile({ data, avatarFile: selectedFile || undefined })
     onClose()
   }

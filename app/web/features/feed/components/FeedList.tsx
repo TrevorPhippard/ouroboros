@@ -24,13 +24,14 @@ export const FeedList = () => {
   }
   // Debug log to inspect the structure of 'data'
   return (
-    <div className="space-y-4">
-      {data.pages.map(
-        (page: { edges: Array<{ id: string }> }, pageIndex: number) => (
+    <div className="space-y-4"> {data.pages.map(
+        (page: { feed: Array<{ id: string }> }, pageIndex: number) => (
           <div key={pageIndex} className="space-y-4">
-            {/* {page.edges.map((post: { id: string }) => (
-              <PostCard key={post.id} post={post} />
-            ))} */}
+          {page.feed.items.map((post: { id: string }) => (
+                      <p>{ JSON.stringify(post) }</p>
+
+              // <PostCard key={post.id} post={post} />
+            ))}
           </div>
         )
       )}

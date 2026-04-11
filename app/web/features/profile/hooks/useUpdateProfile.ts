@@ -9,7 +9,7 @@ export const useUpdateProfile = () => {
     mutationFn: (newProfile: Partial<ProfileType>) =>
       updateProfileApi("currentId", newProfile),
 
-    onMutate: async (newProfile) => {
+    onMutate: async (newProfile: Partial<ProfileType>) => {
       await queryClient.cancelQueries({ queryKey: ["profile"] })
       const previousProfile = queryClient.getQueryData<ProfileType>(["profile"])
       if (previousProfile) {

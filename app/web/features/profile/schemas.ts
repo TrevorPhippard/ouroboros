@@ -15,5 +15,5 @@ export const profileSchema = z.object({
   experiences: z.array(experienceSchema),
 })
 
-export type ProfileType = z.infer<typeof profileSchema>
 export type ExperienceType = z.infer<typeof experienceSchema>
+export type ProfileType = z.infer<typeof profileSchema>

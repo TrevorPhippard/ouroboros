@@ -1,9 +1,9 @@
 import { useFieldArray, useFormContext } from "react-hook-form"
-import { Profile } from "../schema"
+import { ProfileType } from "../schemas"
 import { InputField } from "@/components/ui/form/InputField"
 
 export const ExperienceSection = () => {
-  const { control } = useFormContext<Profile>()
+  const { control } = useFormContext<ProfileType>()
   const { fields, append, remove } = useFieldArray({
     control,
     name: "experiences",

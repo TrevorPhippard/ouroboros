@@ -5,12 +5,17 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 
-	// Ensure this path matches your generated output directory
 	pb "ouroboros/proto/generated/auth"
+
+	"auth/internal/consul"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+
+	"github.com/hashicorp/consul/api"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type authServiceServer struct {
@@ -52,8 +57,6 @@ func (s *authServiceServer) SignOut(ctx context.Context, req *pb.SignOutRequest)
 	}, nil
 }
 
-
-// GetUser implements the single user lookup
 func (s *authServiceServer) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.User, error) {
 	log.Printf("Auth Service: Fetching User ID: %s", req.Id)
 
@@ -64,7 +67,6 @@ func (s *authServiceServer) GetUser(ctx context.Context, req *pb.GetUserRequest)
 	}, nil
 }
 
-// GetUsersByIds implements the batch lookup
 func (s *authServiceServer) GetUsersByIds(ctx context.Context, req *pb.GetUsersByIdsRequest) (*pb.GetUsersByIdsResponse, error) {
 	log.Printf("Auth Service: Fetching %d User IDs", len(req.Ids))
 
@@ -81,6 +83,49 @@ func (s *authServiceServer) GetUsersByIds(ctx context.Context, req *pb.GetUsersB
 }
 
 func main() {
+	// ✅ Consul (Docker-safe address)
+	addr := "consul:8500"
+
+	agent := consul.NewAgent(&api.Config{
+		Address: addr,
+	})
+
+	serviceCfg := consul.Config{
+		ServiceID:   "auth-service-1",
+		ServiceName: "auth-service",
+		Address:     "auth-service",
+		Tags:        []string{"grpc", "auth"},
+		Port:        50053,
+
+		// ✅ HTTP health check (matches new consul package)
+		Check: &api.AgentServiceCheck{
+			HTTP:     "http://auth-service:8080/health",
+			Interval: "10s",
+			Timeout:  "2s",
+		},
+	}
+
+	// ✅ Register service (now returns error)
+	if err := agent.RegisterService(serviceCfg); err != nil {
+		log.Fatalf("failed to register service: %v", err)
+	}
+
+	// ✅ Start HTTP server (metrics + health)
+	go func() {
+		http.Handle("/metrics", promhttp.Handler())
+
+		http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("OK"))
+		})
+
+		log.Println("HTTP server running on :8080 (metrics + health)")
+		if err := http.ListenAndServe(":8080", nil); err != nil {
+			log.Fatalf("failed to start HTTP server: %v", err)
+		}
+	}()
+
+	// ✅ gRPC server
 	lis, err := net.Listen("tcp", ":50053")
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
@@ -88,12 +133,12 @@ func main() {
 
 	s := grpc.NewServer()
 
-	// Updated registration function to match the service name in auth.proto
 	pb.RegisterAuthServiceServer(s, &authServiceServer{})
 
 	reflection.Register(s)
 
 	log.Println("Auth Service (gRPC) running on :50053")
+
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
