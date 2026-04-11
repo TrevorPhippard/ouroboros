@@ -59,7 +59,11 @@ The application supports core social workflows including authentication, profile
 - Configure environment variables.
 - Start the frontend and backend services.
 
-The frontend will be available at <http://localhost:3000>, and the GraphQL playground at <http://localhost:4000/graphql>.
+Frontend: <http://localhost:3000>, 
+GraphQL playground: <http://localhost:4000/graphql>.
+pgAdmin:    <http://localhost:8083/browser>
+Consul:     <http://localhost:8500/ui/dc1/services>
+Prometheus: <http://localhost:9090/query>
 
 ### pgAdmin
 https://www.youtube.com/watch?v=7uXbWTLIHJo
