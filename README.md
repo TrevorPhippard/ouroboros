@@ -27,19 +27,6 @@ The application supports core social workflows including authentication, profile
 - Troubleshooting and FAQ
 - Changelog structure by release
 
-## What still needs source input
-
-To finalize this documentation without inventing details, the following files are required:
-
-- GraphQL schema file
-- gRPC proto files
-- Architecture diagram text or source
-- Style guide
-- Release history / tags / changelog notes
-- CI/CD pipeline definition
-- Next.js route map or app router tree
-
-# Getting Started
 
 ## Prerequisites
 
