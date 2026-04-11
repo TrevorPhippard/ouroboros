@@ -28,7 +28,7 @@ export const FeedList = () => {
         (page: { feed: Array<{ id: string }> }, pageIndex: number) => (
           <div key={pageIndex} className="space-y-4">
           {page.feed.items.map((post: { id: string }) => (
-                      // <p>{ JSON.stringify(post) }</p>
+                      <p>{ JSON.stringify(post) }</p>
 
               // <PostCard key={post.id} post={post} />
             ))}
