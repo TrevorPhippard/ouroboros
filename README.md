@@ -30,7 +30,7 @@ The application supports core social workflows including authentication, profile
 - postgres
 - kafka
 - rabbitMQ
-- pact
+- pactflow
 - consul
 - prometheus 
 
