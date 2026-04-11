@@ -70,12 +70,12 @@ Create a .env.local file for the frontend and a matching environment file for se
 
 Run the frontend and backend services in development mode.
 
-# Frontend
+## Frontend
 
 npm install
 npm run dev
 
-# Example Go service
+## Example Go service
 
 ```
 # Frontend
@@ -87,7 +87,7 @@ go test ./...
 go run ./cmd/<service-name>
 ```
 
-# Deployment
+## Deployment
 
 Deployment should follow the repository's CI/CD process once provided. A standard flow is:
 
