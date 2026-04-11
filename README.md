@@ -63,7 +63,9 @@ The frontend will be available at <http://localhost:3000>, and the GraphQL playg
 
 ### pgAdmin
 https://www.youtube.com/watch?v=7uXbWTLIHJo
-around the 2:40 mark
+
+Host name/address: postgres
+Port: 5432
 
 ### Environment variables
 
