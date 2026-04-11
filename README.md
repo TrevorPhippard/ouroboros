@@ -27,8 +27,11 @@ The application supports core social workflows including authentication, profile
 - Troubleshooting and FAQ
 - Changelog structure by release
 
-- **Go:** v1.21 or higher
+## Prerequisites
+
 - **Docker & Docker Compose:** Latest stable
+- **GraphQL endpoint access:** Ensure the GraphQL gateway is accessible
+- **Environment variables configured:** Set all required environment variables
 
 ### Installation
 
