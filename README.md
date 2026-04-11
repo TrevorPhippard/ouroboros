@@ -61,6 +61,10 @@ The application supports core social workflows including authentication, profile
 
 The frontend will be available at <http://localhost:3000>, and the GraphQL playground at <http://localhost:4000/graphql>.
 
+### pgAdmin
+https://www.youtube.com/watch?v=7uXbWTLIHJo
+around the 2:40 mark
+
 ### Environment variables
 
 Create a .env.local file for the frontend and a matching environment file for services. The exact variable names should come from the repository, but the following categories are typically required:
