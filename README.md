@@ -16,7 +16,7 @@ The application supports core social workflows including authentication, profile
 - SignIn
 - SignOut
 
-## What this documentation covers
+### What this documentation covers
 
 - Project overview and architecture
 - Local setup and deployment flow
@@ -27,14 +27,10 @@ The application supports core social workflows including authentication, profile
 - Troubleshooting and FAQ
 - Changelog structure by release
 
-
-## Prerequisites
-
-- **Node.js:** v18.x or higher
 - **Go:** v1.21 or higher
 - **Docker & Docker Compose:** Latest stable
 
-## Installation
+### Installation
 
 - Clone the repository.
 - Install frontend dependencies.
@@ -44,7 +40,7 @@ The application supports core social workflows including authentication, profile
 
 The frontend will be available at <http://localhost:3000>, and the GraphQL playground at <http://localhost:4000/graphql>.
 
-## Environment variables
+### Environment variables
 
 Create a .env.local file for the frontend and a matching environment file for services. The exact variable names should come from the repository, but the following categories are typically required:
 
@@ -57,12 +53,12 @@ Create a .env.local file for the frontend and a matching environment file for se
 
 Run the frontend and backend services in development mode.
 
-## Frontend
+### Frontend
 
 npm install
 npm run dev
 
-## Example Go service
+### Example Go service
 
 ```
 # Frontend
@@ -74,7 +70,7 @@ go test ./...
 go run ./cmd/<service-name>
 ```
 
-## Deployment
+### Deployment
 
 Deployment should follow the repository's CI/CD process once provided. A standard flow is:
 
@@ -88,7 +84,7 @@ Deployment should follow the repository's CI/CD process once provided. A standar
 7. Verify GraphQL health and service readiness.
 ```
 
-## Recommended verification steps
+### Recommended verification steps
 
 - Confirm the GraphQL gateway responds in staging.
 - Confirm gRPC service health checks pass.
@@ -97,11 +93,11 @@ Deployment should follow the repository's CI/CD process once provided. A standar
 
 # Reference
 
-## GraphQL API
+### GraphQL API
 
 The GraphQL operations below are based only on the query and mutation definitions you supplied.
 
-## Common patterns
+### Common patterns
 
 IDs are passed as ID!.
 Inputs are passed as GraphQL input objects where defined.
@@ -110,7 +106,7 @@ Query results should be treated as the response contract for the frontend.
 
 **_ link to GraphQL_API.md for the full reference of all operations _**
 
-## GraphQL usage example in JavaScript
+### GraphQL usage example in JavaScript
 
 ```
 
@@ -118,11 +114,11 @@ import { GraphQLClient } from "graphql-request"
 
 ```
 
-## gRPC API
+### gRPC API
 
 **_ link to gRPC_API.md for the full reference of all operations _**
 
-## GraphQL usage example in Go
+### GraphQL usage example in Go
 
 ```
 
