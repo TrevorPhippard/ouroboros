@@ -15,18 +15,20 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
+  // const { isAuthenticated, logout, user } = useAuthStore();
+
 export const Navbar = () => {
-  const { user, logout } = useAuthStore()
   const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const { isAuthenticated, logout, user } = useAuthStore();
 
   // Mock notification counts - these would come from TanStack Query polling
   const unreadNotifications = 3
 
   const navItems = [
     { icon: Home, label: "Home", href: "/feed" },
-    { icon: Users, label: "My Network", href: "/networks" },
-    { icon: Briefcase, label: "Jobs", href: "/jobs" },
-    { icon: MessageSquare, label: "Messaging", href: "/messaging" },
+    { icon: Users, label: "register", href: "/register" },
+    { icon: Users, label: "login", href: "/login" },
+    { icon: Users, label: "profile", href: "/profile" },
     {
       icon: Bell,
       label: "Notifications",
@@ -40,8 +42,8 @@ export const Navbar = () => {
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
         {/* Left: Logo & Search */}
         <div className="flex flex-1 items-center gap-2">
-          <div className="rounded bg-[#0a66c2] p-1 text-xl leading-none font-bold text-white">
-            in
+          <div className="rounded bg-[#494453] p-1 text-xl leading-none font-bold text-white">
+            οὐροβόρος
           </div>
           <div className="relative hidden w-full max-w-xs md:block">
             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-500" />
@@ -83,7 +85,7 @@ export const Navbar = () => {
               className="group flex flex-col items-center"
             >
               <img
-                src={user?.avatarUrl || "https://via.placeholder.com/24"}
+                src={user?.avatarUrl || "https://avatars.githubusercontent.com/u/8942758?v=4"}
                 alt="Profile"
                 className="h-6 w-6 rounded-full border border-gray-200"
               />

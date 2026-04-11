@@ -27,7 +27,7 @@ export const EditProfileModal = ({
   })
 
   const onSubmit = async (data: ProfileType) => {
-    await updateProfile({  avatarFile: selectedFile || undefined })
+    await updateProfile({ data, avatarFile: selectedFile || undefined })
     onClose()
   }
 
