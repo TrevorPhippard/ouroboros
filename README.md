@@ -16,6 +16,24 @@ The application supports core social workflows including authentication, profile
 - SignIn
 - SignOut
 
+### Tech I hope to use
+- nextjs
+- tanstack-query
+- zustand
+- shadcn
+- tailwindcss
+- graphql
+- gRPC
+- golang
+- docker
+- neo4j
+- postgres
+- kafka
+- rabbitMQ
+- pact
+- consul
+- prometheus 
+
 ### What this documentation covers
 
 - Project overview and architecture
