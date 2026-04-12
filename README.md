@@ -1,3 +1,5 @@
+![ouroboros_logo](https://github.com/TrevorPhippard/ouroboros/blob/main/app/web/public/cleo_mini.png)
+
 # ouroboros
 
 A modern social networking platform.
