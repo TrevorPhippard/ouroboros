@@ -115,13 +115,6 @@ Deployment should follow the repository's CI/CD process once provided. A standar
 7. Verify GraphQL health and service readiness.
 ```
 
-### Recommended verification steps
-
-- Confirm the GraphQL gateway responds in staging.
-- Confirm gRPC service health checks pass.
-- Confirm the frontend can authenticate, fetch the feed, and create a post.
-- Confirm notifications and profile queries return expected shapes.
-
 # Reference
 
 ### GraphQL API
@@ -135,25 +128,24 @@ Inputs are passed as GraphQL input objects where defined.
 Mutations return only the fields selected in the operation.
 Query results should be treated as the response contract for the frontend.
 
-**_ link to GraphQL_API.md for the full reference of all operations _**
+**_ pending link to GraphQL_API.md _**
 
 ### GraphQL usage example in JavaScript
 
 ```
 
-import { GraphQLClient } from "graphql-request"
-
+pending
 ```
 
 ### gRPC API
 
-**_ link to gRPC_API.md for the full reference of all operations _**
+**_ pending link to gRPC_API.md  _**
 
 ### GraphQL usage example in Go
 
 ```
 
-package main
+pending
 
 ```
 
