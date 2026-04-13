@@ -55,7 +55,7 @@ func (s *notificationServiceServer) MarkAsRead(ctx context.Context, req *pb.Mark
 }
 
 func main() {
-	// ✅ Consul (Docker-safe)
+	// Consul (Docker-safe)
 	addr := "consul:8500"
 
 	agent := consul.NewAgent(&api.Config{
@@ -69,7 +69,7 @@ func main() {
 		Tags:        []string{"grpc", "notification"},
 		Port:        50056,
 
-		// ✅ HTTP health check (standardized across all services)
+		// HTTP health check (standardized across all services)
 		Check: &api.AgentServiceCheck{
 			HTTP:     "http://notification-service:8080/health",
 			Interval: "10s",
@@ -77,12 +77,12 @@ func main() {
 		},
 	}
 
-	// ✅ Register service
+	// Register service
 	if err := agent.RegisterService(serviceCfg); err != nil {
 		log.Fatalf("failed to register service: %v", err)
 	}
 
-	// ✅ HTTP server (metrics + health)
+	// HTTP server (metrics + health)
 	go func() {
 		http.Handle("/metrics", promhttp.Handler())
 

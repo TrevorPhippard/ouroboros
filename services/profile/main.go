@@ -40,7 +40,7 @@ func connectDB(dbURL string) *gorm.DB {
 }
 
 func main() {
-	// ✅ Consul (Docker-safe DNS)
+	// Consul (Docker-safe DNS)
 	addr := "consul:8500"
 
 	agent := consul.NewAgent(&api.Config{
@@ -54,7 +54,7 @@ func main() {
 		Tags:        []string{"grpc", "profile"},
 		Port:        50058,
 
-		// ✅ HTTP health check (standardized across system)
+		// HTTP health check (standardized across system)
 		Check: &api.AgentServiceCheck{
 			HTTP:     "http://profile-service:8080/health",
 			Interval: "10s",
@@ -62,7 +62,7 @@ func main() {
 		},
 	}
 
-	// ✅ Register service with Consul
+	// Register service with Consul
 	if err := agent.RegisterService(serviceCfg); err != nil {
 		log.Fatalf("failed to register service: %v", err)
 	}
@@ -83,7 +83,7 @@ func main() {
 
 	seedDB(db)
 
-	// ✅ HTTP server (metrics + health)
+	// HTTP server (metrics + health)
 	go func() {
 		http.Handle("/metrics", promhttp.Handler())
 

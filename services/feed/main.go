@@ -2,45 +2,53 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"encoding/json"
 	"log"
 	"net"
 	"net/http"
+	"sync"
 
-	pb "ouroboros/proto/generated/feed"
+	pbFeed "ouroboros/proto/generated/feed"
 
 	"feed/internal/consul"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
-
 	"github.com/hashicorp/consul/api"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/segmentio/kafka-go"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 type feedServiceServer struct {
-	pb.UnimplementedFeedServiceServer
+	pbFeed.UnimplementedFeedServiceServer
+	mu   sync.RWMutex
+	feed map[string][]*pbFeed.FeedItem
 }
 
-// GetFeed implements the main feed retrieval logic
-func (s *feedServiceServer) GetFeed(ctx context.Context, req *pb.GetFeedRequest) (*pb.GetFeedResponse, error) {
-	log.Printf("Feed Service: Generating feed for User ID: %s", req.UserId)
+type PostCreatedEvent struct {
+	EventID   string `json:"eventId"`
+	Type      string `json:"type"`
+	Timestamp string `json:"timestamp"`
+	Data      struct {
+		PostID   string `json:"postId"`
+		AuthorID string `json:"authorId"`
+		Content  string `json:"content"`
+	} `json:"data"`
+}
 
-	var items []*pb.FeedItem
-	for i := 1; i <= 5; i++ {
-		items = append(items, &pb.FeedItem{
-			PostId: fmt.Sprintf("post_uuid_%d", i),
-			Cursor: fmt.Sprintf("cursor_val_%d", i),
-		})
-	}
+// GetFeed now returns real (event-built) data
+func (s *feedServiceServer) GetFeed(ctx context.Context, req *pbFeed.GetFeedRequest) (*pbFeed.GetFeedResponse, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
-	return &pb.GetFeedResponse{
+	items := s.feed[req.UserId]
+
+	return &pbFeed.GetFeedResponse{
 		Items: items,
 	}, nil
 }
 
 func main() {
-	// ✅ Consul (Docker-safe)
 	addr := "consul:8500"
 
 	agent := consul.NewAgent(&api.Config{
@@ -53,8 +61,6 @@ func main() {
 		Address:     "feed-service",
 		Tags:        []string{"grpc", "feed"},
 		Port:        50055,
-
-		// ✅ HTTP health check
 		Check: &api.AgentServiceCheck{
 			HTTP:     "http://feed-service:8080/health",
 			Interval: "10s",
@@ -62,12 +68,65 @@ func main() {
 		},
 	}
 
-	// ✅ Register service (new error-returning version)
 	if err := agent.RegisterService(serviceCfg); err != nil {
 		log.Fatalf("failed to register service: %v", err)
 	}
 
-	// ✅ HTTP server (health + metrics)
+	feedServer := &feedServiceServer{
+		feed: make(map[string][]*pbFeed.FeedItem),
+	}
+
+	// 🔥 Kafka Consumer
+	go func() {
+		reader := kafka.NewReader(kafka.ReaderConfig{
+			Brokers: []string{"kafka:9092"},
+			Topic:   "posts.created",
+			GroupID: "feed-service",
+		})
+
+		for {
+			msg, err := reader.ReadMessage(context.Background())
+			if err != nil {
+				log.Println("kafka read error:", err)
+				continue
+			}
+
+			var event PostCreatedEvent
+			if err := json.Unmarshal(msg.Value, &event); err != nil {
+				log.Println("failed to unmarshal event")
+				continue
+			}
+
+			log.Println("Received event:", event.Type)
+
+			item := &pbFeed.FeedItem{
+				PostId: event.Data.PostID,
+				Cursor: event.Data.PostID,
+				Post: &pbFeed.Post{
+					Id:        event.Data.PostID,
+					AuthorId:  event.Data.AuthorID,
+					Content:   event.Data.Content,
+					Timestamp: event.Timestamp,
+				},
+			}
+
+			feedServer.mu.Lock()
+
+			// For now: global feed (all users get all posts)
+			for userID := range feedServer.feed {
+				feedServer.feed[userID] = append([]*pbFeed.FeedItem{item}, feedServer.feed[userID]...)
+			}
+
+			// Ensure at least one user exists (for testing)
+			if len(feedServer.feed) == 0 {
+				feedServer.feed["test-user"] = []*pbFeed.FeedItem{item}
+			}
+
+			feedServer.mu.Unlock()
+		}
+	}()
+
+	// HTTP server
 	go func() {
 		http.Handle("/metrics", promhttp.Handler())
 
@@ -82,14 +141,14 @@ func main() {
 		}
 	}()
 
-	// ✅ gRPC server
+	// gRPC server
 	lis, err := net.Listen("tcp", ":50055")
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
 	s := grpc.NewServer()
-	pb.RegisterFeedServiceServer(s, &feedServiceServer{})
+	pbFeed.RegisterFeedServiceServer(s, feedServer)
 
 	reflection.Register(s)
 

@@ -66,8 +66,12 @@ func (r *mutationResolver) SignOut(ctx context.Context) (*model.SignOutResponse,
 func (r *mutationResolver) UpdateProfile(ctx context.Context, userID string, input model.UpdateProfileInput) (*model.Profile, error) {
 	// Convert pointers safely
 	var headline, about string
-	if input.Headline != nil { headline = *input.Headline }
-	if input.About != nil { about = *input.About }
+	if input.Headline != nil {
+		headline = *input.Headline
+	}
+	if input.About != nil {
+		about = *input.About
+	}
 
 	res, err := r.ProfileClient.UpdateProfile(ctx, &profilepb.UpdateProfileRequest{
 		UserId:   userID,
@@ -106,7 +110,7 @@ func (r *mutationResolver) CreatePost(ctx context.Context, input model.CreatePos
 
 // CreateComment is the resolver for the createComment field.
 func (r *mutationResolver) CreateComment(ctx context.Context, input model.CreateCommentInput) (*model.Comment, error) {
-		panic(fmt.Errorf("not implemented: CreateComment - CreateComment"))
+	panic(fmt.Errorf("not implemented: CreateComment - CreateComment"))
 
 	// res, err := r.PostClient.CreateComment(ctx, &postpb.CreateCommentRequest{
 	// 	PostId:   input.PostID,
@@ -241,26 +245,62 @@ func (r *queryResolver) PostsByIds(ctx context.Context, ids []string) ([]*model.
 
 // Feed is the resolver for the feed query.
 func (r *queryResolver) Feed(ctx context.Context, userID string, limit *int32, cursor *string) (*model.FeedResponse, error) {
-	// reqLimit := int32(20)
-	// if limit != nil { reqLimit = *limit }
+	reqLimit := int32(20)
+	if limit != nil {
+		reqLimit = *limit
+	}
 
-	// reqCursor := ""
-	// if cursor != nil { reqCursor = *cursor }
+	reqCursor := ""
+	if cursor != nil {
+		reqCursor = *cursor
+	}
 
+	// 1. Get the feed (which just contains Post IDs and Cursors)
+	// Give me the next 20 Post IDs for User A
 	feedRes, err := r.FeedClient.GetFeed(ctx, &feedpb.GetFeedRequest{
 		UserId: userID,
-		// Limit:  reqLimit,
-		// Cursor: reqCursor,
+		Limit:  reqLimit,
+		Cursor: reqCursor,
 	})
 	if err != nil {
 		return nil, err
 	}
 
+	// 2. Extract all the Post IDs to fetch them in a single batch
+	var postIDs []string
+	for _, item := range feedRes.Items {
+		if item.PostId != "" {
+			postIDs = append(postIDs, item.PostId)
+		}
+	}
+
+	// 3. Fetch the actual posts from the Post service
+	postMap := make(map[string]*model.Post)
+	if len(postIDs) > 0 {
+		postsRes, err := r.PostClient.GetPostsByIds(ctx, &postpb.GetPostsByIdsRequest{Ids: postIDs})
+		if err != nil {
+			// You can choose to return an error here, or just log it and return partial data (null posts)
+			fmt.Printf("Warning: failed to fetch posts for feed: %v\n", err)
+		} else {
+			// Create a map for quick lookup by ID
+			for _, p := range postsRes.Posts {
+				postMap[p.Id] = &model.Post{
+					ID:        p.Id,
+					Content:   p.Content,
+					CreatedAt: p.CreatedAt,
+					AuthorID:  p.AuthorId,
+				}
+			}
+		}
+	}
+
+	// 4. Stitch the Feed items and the Posts together
 	var items []*model.FeedItem
 	for _, item := range feedRes.Items {
 		items = append(items, &model.FeedItem{
 			PostID: item.PostId,
 			Cursor: item.Cursor,
+			Post:   postMap[item.PostId], // If the post wasn't found, this naturally defaults to nil
 		})
 	}
 
@@ -270,7 +310,9 @@ func (r *queryResolver) Feed(ctx context.Context, userID string, limit *int32, c
 // Notifications is the resolver for the notifications field.
 func (r *queryResolver) Notifications(ctx context.Context, userID string, limit *int32) ([]*model.Notification, error) {
 	reqLimit := int32(20)
-	if limit != nil { reqLimit = *limit }
+	if limit != nil {
+		reqLimit = *limit
+	}
 
 	res, err := r.NotificationClient.GetNotifications(ctx, &notificationpb.GetNotificationsRequest{
 		UserId: userID,
@@ -305,8 +347,10 @@ func (r *subscriptionResolver) NotificationReceived(ctx context.Context, userID 
 
 // Mutation returns MutationResolver implementation.
 func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
+
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
+
 // Subscription returns SubscriptionResolver implementation.
 func (r *Resolver) Subscription() SubscriptionResolver { return &subscriptionResolver{r} }
 

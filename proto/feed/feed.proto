@@ -11,12 +11,21 @@ service FeedService {
 
 message GetFeedRequest {
   string user_id = 1;
-  // common.Pagination pagination = 2;
+  int32 limit = 3;
+  string cursor = 4;
+}
+
+message Post {
+  string id = 1;
+  string author_id = 2;
+  string content = 3;
+  string timestamp = 4; // ISO8601 format
 }
 
 message FeedItem {
   string post_id = 1;
   string cursor = 2;
+  Post post = 3;
 }
 
 message GetFeedResponse {
