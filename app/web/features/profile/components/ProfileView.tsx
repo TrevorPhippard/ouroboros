@@ -32,12 +32,12 @@ export const ProfileView = ({ userId }: { userId: string }) => {
 
         <div className="px-6 pt-16 pb-6">
           <h1 className="text-2xl font-bold text-gray-900">
-            {profile.headline || "Your Name Here"}{" "}
+            {profile.name || "Your Name Here"}{" "}
           </h1>{" "}
           {/* Mocked Name */}
           {/* Our Inline Editable Component */}
           <div className="mt-1 text-gray-600">
-            {profile.headline || "Your headline goes here..."}
+            {/* {profile.headline || "Your headline goes here..."} */}
             <EditableHeadline initialValue={profile.headline} />
           </div>
           <p className="mt-2 text-sm text-gray-500">

@@ -17,7 +17,7 @@ const MOCK_PROFILES: Record<string, User> = {
 }
 
 export const profileResolvers = {
-  getUserProfile: (variables: { id: string }) => {
+  getProfile: (variables: { id: string }) => {
     const profile = MOCK_PROFILES[variables.id]
     if (!profile) throw new Error("PROFILE_NOT_FOUND")
     return profile
