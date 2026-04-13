@@ -16,11 +16,9 @@ import {
 import { cn } from "@/lib/utils"
 import { SignOutButton } from "@/features/auth/components/SignOutButton"
 
-// const { isAuthenticated, logout, user } = useAuthStore();
-
 export const Navbar = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
-  const { isAuthenticated, logout, user } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
 
   // Mock notification counts - these would come from TanStack Query polling
   const unreadNotifications = 3
@@ -115,12 +113,9 @@ export const Navbar = () => {
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={() => logout()}
-                  className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-gray-600 hover:bg-gray-50"
-                >
+                <div className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-gray-600 hover:bg-gray-50">
                   <SignOutButton />
-                </button>
+                </div>
               </div>
             )}
           </div>

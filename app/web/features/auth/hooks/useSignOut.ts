@@ -1,7 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useAuthStore } from "@/store/useAuthStore"
 
 export function useSignOut() {
   const queryClient = useQueryClient()
+  const { logout } = useAuthStore()
 
   return useMutation({
     mutationFn: async () => {
@@ -11,6 +13,7 @@ export function useSignOut() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["user-session"] })
+      logout()
     },
   })
 }
