@@ -23,7 +23,9 @@ const (
 
 type GetFeedRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"` // common.Pagination pagination = 2;
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Limit         int32                  `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
+	Cursor        string                 `protobuf:"bytes,4,opt,name=cursor,proto3" json:"cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -65,17 +67,100 @@ func (x *GetFeedRequest) GetUserId() string {
 	return ""
 }
 
+func (x *GetFeedRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *GetFeedRequest) GetCursor() string {
+	if x != nil {
+		return x.Cursor
+	}
+	return ""
+}
+
+type Post struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	AuthorId      string                 `protobuf:"bytes,2,opt,name=author_id,json=authorId,proto3" json:"author_id,omitempty"`
+	Content       string                 `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
+	Timestamp     string                 `protobuf:"bytes,4,opt,name=timestamp,proto3" json:"timestamp,omitempty"` // ISO8601 format
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Post) Reset() {
+	*x = Post{}
+	mi := &file_feed_feed_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Post) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Post) ProtoMessage() {}
+
+func (x *Post) ProtoReflect() protoreflect.Message {
+	mi := &file_feed_feed_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Post.ProtoReflect.Descriptor instead.
+func (*Post) Descriptor() ([]byte, []int) {
+	return file_feed_feed_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *Post) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Post) GetAuthorId() string {
+	if x != nil {
+		return x.AuthorId
+	}
+	return ""
+}
+
+func (x *Post) GetContent() string {
+	if x != nil {
+		return x.Content
+	}
+	return ""
+}
+
+func (x *Post) GetTimestamp() string {
+	if x != nil {
+		return x.Timestamp
+	}
+	return ""
+}
+
 type FeedItem struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	PostId        string                 `protobuf:"bytes,1,opt,name=post_id,json=postId,proto3" json:"post_id,omitempty"`
 	Cursor        string                 `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	Post          *Post                  `protobuf:"bytes,3,opt,name=post,proto3" json:"post,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *FeedItem) Reset() {
 	*x = FeedItem{}
-	mi := &file_feed_feed_proto_msgTypes[1]
+	mi := &file_feed_feed_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -87,7 +172,7 @@ func (x *FeedItem) String() string {
 func (*FeedItem) ProtoMessage() {}
 
 func (x *FeedItem) ProtoReflect() protoreflect.Message {
-	mi := &file_feed_feed_proto_msgTypes[1]
+	mi := &file_feed_feed_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -100,7 +185,7 @@ func (x *FeedItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FeedItem.ProtoReflect.Descriptor instead.
 func (*FeedItem) Descriptor() ([]byte, []int) {
-	return file_feed_feed_proto_rawDescGZIP(), []int{1}
+	return file_feed_feed_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *FeedItem) GetPostId() string {
@@ -117,6 +202,13 @@ func (x *FeedItem) GetCursor() string {
 	return ""
 }
 
+func (x *FeedItem) GetPost() *Post {
+	if x != nil {
+		return x.Post
+	}
+	return nil
+}
+
 type GetFeedResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Items         []*FeedItem            `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"` // common.PageInfo page_info = 2;
@@ -126,7 +218,7 @@ type GetFeedResponse struct {
 
 func (x *GetFeedResponse) Reset() {
 	*x = GetFeedResponse{}
-	mi := &file_feed_feed_proto_msgTypes[2]
+	mi := &file_feed_feed_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -138,7 +230,7 @@ func (x *GetFeedResponse) String() string {
 func (*GetFeedResponse) ProtoMessage() {}
 
 func (x *GetFeedResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_feed_feed_proto_msgTypes[2]
+	mi := &file_feed_feed_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -151,7 +243,7 @@ func (x *GetFeedResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFeedResponse.ProtoReflect.Descriptor instead.
 func (*GetFeedResponse) Descriptor() ([]byte, []int) {
-	return file_feed_feed_proto_rawDescGZIP(), []int{2}
+	return file_feed_feed_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *GetFeedResponse) GetItems() []*FeedItem {
@@ -165,12 +257,21 @@ var File_feed_feed_proto protoreflect.FileDescriptor
 
 const file_feed_feed_proto_rawDesc = "" +
 	"\n" +
-	"\x0ffeed/feed.proto\x12\x04feed\")\n" +
+	"\x0ffeed/feed.proto\x12\x04feed\"W\n" +
 	"\x0eGetFeedRequest\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\";\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x14\n" +
+	"\x05limit\x18\x03 \x01(\x05R\x05limit\x12\x16\n" +
+	"\x06cursor\x18\x04 \x01(\tR\x06cursor\"k\n" +
+	"\x04Post\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
+	"\tauthor_id\x18\x02 \x01(\tR\bauthorId\x12\x18\n" +
+	"\acontent\x18\x03 \x01(\tR\acontent\x12\x1c\n" +
+	"\ttimestamp\x18\x04 \x01(\tR\ttimestamp\"[\n" +
 	"\bFeedItem\x12\x17\n" +
 	"\apost_id\x18\x01 \x01(\tR\x06postId\x12\x16\n" +
-	"\x06cursor\x18\x02 \x01(\tR\x06cursor\"7\n" +
+	"\x06cursor\x18\x02 \x01(\tR\x06cursor\x12\x1e\n" +
+	"\x04post\x18\x03 \x01(\v2\n" +
+	".feed.PostR\x04post\"7\n" +
 	"\x0fGetFeedResponse\x12$\n" +
 	"\x05items\x18\x01 \x03(\v2\x0e.feed.FeedItemR\x05items2E\n" +
 	"\vFeedService\x126\n" +
@@ -188,21 +289,23 @@ func file_feed_feed_proto_rawDescGZIP() []byte {
 	return file_feed_feed_proto_rawDescData
 }
 
-var file_feed_feed_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_feed_feed_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_feed_feed_proto_goTypes = []any{
 	(*GetFeedRequest)(nil),  // 0: feed.GetFeedRequest
-	(*FeedItem)(nil),        // 1: feed.FeedItem
-	(*GetFeedResponse)(nil), // 2: feed.GetFeedResponse
+	(*Post)(nil),            // 1: feed.Post
+	(*FeedItem)(nil),        // 2: feed.FeedItem
+	(*GetFeedResponse)(nil), // 3: feed.GetFeedResponse
 }
 var file_feed_feed_proto_depIdxs = []int32{
-	1, // 0: feed.GetFeedResponse.items:type_name -> feed.FeedItem
-	0, // 1: feed.FeedService.GetFeed:input_type -> feed.GetFeedRequest
-	2, // 2: feed.FeedService.GetFeed:output_type -> feed.GetFeedResponse
-	2, // [2:3] is the sub-list for method output_type
-	1, // [1:2] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	1, // 0: feed.FeedItem.post:type_name -> feed.Post
+	2, // 1: feed.GetFeedResponse.items:type_name -> feed.FeedItem
+	0, // 2: feed.FeedService.GetFeed:input_type -> feed.GetFeedRequest
+	3, // 3: feed.FeedService.GetFeed:output_type -> feed.GetFeedResponse
+	3, // [3:4] is the sub-list for method output_type
+	2, // [2:3] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_feed_feed_proto_init() }
@@ -216,7 +319,7 @@ func file_feed_feed_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_feed_feed_proto_rawDesc), len(file_feed_feed_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

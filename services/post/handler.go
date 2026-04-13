@@ -2,20 +2,32 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	pb "ouroboros/proto/generated/post"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/segmentio/kafka-go"
 	"gorm.io/gorm"
 )
 
 // PostServiceServer implements the PostService gRPC interface
 type PostServiceServer struct {
 	pb.UnimplementedPostServiceServer
-	DB *gorm.DB
+	DB     *gorm.DB
+	Writer *kafka.Writer
 }
 
-
+type PostCreatedEvent struct {
+	EventID   string    `json:"eventId"`
+	Type      string    `json:"type"`
+	Timestamp time.Time `json:"timestamp"`
+	Data      struct {
+		PostID   string `json:"postId"`
+		AuthorID string `json:"authorId"`
+		Content  string `json:"content"`
+	} `json:"data"`
+}
 
 func (s *PostServiceServer) CreatePost(ctx context.Context, req *pb.CreatePostRequest) (*pb.Post, error) {
 	post := DBPost{
@@ -27,6 +39,28 @@ func (s *PostServiceServer) CreatePost(ctx context.Context, req *pb.CreatePostRe
 
 	if err := s.DB.Create(&post).Error; err != nil {
 		return nil, err
+	}
+
+	// Create event
+	event := PostCreatedEvent{
+		EventID:   uuid.NewString(),
+		Type:      "PostCreated",
+		Timestamp: time.Now().UTC(),
+	}
+	event.Data.PostID = post.ID
+	event.Data.AuthorID = post.AuthorID
+	event.Data.Content = post.Content
+
+	value, _ := json.Marshal(event)
+
+	// Publish to Kafka
+	err := s.Writer.WriteMessages(ctx, kafka.Message{
+		Key:   []byte(post.AuthorID),
+		Value: value,
+	})
+
+	if err != nil {
+		println("failed to publish event:", err.Error())
 	}
 
 	return &pb.Post{
@@ -52,50 +86,24 @@ func (s *PostServiceServer) GetPost(ctx context.Context, req *pb.GetPostRequest)
 	}, nil
 }
 
-// GetPosts pulls real data from the isolated post_db
 func (s *PostServiceServer) GetPosts(ctx context.Context, req *pb.GetPostsByIdsRequest) (*pb.GetPostsByIdsResponse, error) {
 	var dbPosts []DBPost
 
-	// Use GORM to find posts by the requested AuthorID
 	result := s.DB.Where("author_id = ?", req.Ids).Find(&dbPosts)
 	if result.Error != nil {
 		return nil, result.Error
 	}
 
-	// Map GORM models to Protobuf messages
 	pbPosts := make([]*pb.Post, 0, len(dbPosts))
 
 	for _, p := range dbPosts {
 		pbPosts = append(pbPosts, &pb.Post{
-			Id:       p.ID,
-			AuthorId: p.AuthorID,
-			Content:  p.Content,
+			Id:        p.ID,
+			AuthorId:  p.AuthorID,
+			Content:   p.Content,
 			CreatedAt: p.CreatedAt.Format(time.RFC3339),
 		})
 	}
 
 	return &pb.GetPostsByIdsResponse{Posts: pbPosts}, nil
 }
-
-
-
-// func (s *PostServiceServer) GetCommentsByPostId(ctx context.Context, req *pb.GetCommentsRequest) (*pb.GetCommentsResponse, error) {
-// 	var comments []DBComment
-
-// 	if err := s.DB.Where("post_id = ?", req.PostId).Find(&comments).Error; err != nil {
-// 		return nil, err
-// 	}
-
-// 	pbComments := make([]*pb.Comment, 0, len(comments))
-// 	for _, c := range comments {
-// 		pbComments = append(pbComments, &pb.Comment{
-// 			Id:        c.ID,
-// 			PostId:    c.PostID,
-// 			AuthorId:  c.AuthorID,
-// 			Content:   c.Content,
-// 			CreatedAt: c.CreatedAt.Format(time.RFC3339),
-// 		})
-// 	}
-
-// 	return &pb.GetCommentsResponse{Comments: pbComments}, nil
-// }

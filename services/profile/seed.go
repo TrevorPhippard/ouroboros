@@ -20,17 +20,22 @@ func seedDB(db *gorm.DB) {
 
 	Profile := []Profile{
 		{
+			ID:          "profile-1",
 			UserId:      "user-1",
 			DisplayName: "Alice",
 			AvatarUrl:   "https://api.dicebear.com/7.x/avataaars/svg?seed=user-1",
 			Bio:         "Hello, I'm Alice! I love coding and coffee.",
+			Headline:    "Software Engineer",
+			About:       "Passionate about building scalable systems.",
 		},
 		{
+			ID:          "profile-2",
 			UserId:      "user-2",
 			DisplayName: "Bob",
 			AvatarUrl:   "https://api.dicebear.com/7.x/avataaars/svg?seed=user-2",
 			Bio:         "Bob here! Avid traveler and foodie.",
-
+			Headline:    "Product Manager",
+			About:       "Love creating products that people love.",
 		},
 	}
 

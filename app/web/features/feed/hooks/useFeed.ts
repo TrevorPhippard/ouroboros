@@ -3,9 +3,11 @@ import { GET_FEED } from "@/lib/queries"
 import { PostType } from "../schemas"
 
 interface FeedPageData {
-  edges: PostType[]
-  pageInfo: {
-    nextCursor: string | null
+  feed: {
+    items: PostType[]
+    pageInfo: {
+      nextCursor: string | null
+    }
   }
 }
 
@@ -21,6 +23,6 @@ export const useFeedQuery = () => ({
   },
   initialPageParam: null,
   getNextPageParam: (lastPage: FeedPageData) =>
-    lastPage.pageInfo?.nextCursor ?? undefined,
+    lastPage.feed.pageInfo?.nextCursor ?? undefined,
   staleTime: 1000 * 60, // 1 minute to ensure hydration sticks
 })

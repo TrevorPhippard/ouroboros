@@ -83,7 +83,7 @@ func (s *authServiceServer) GetUsersByIds(ctx context.Context, req *pb.GetUsersB
 }
 
 func main() {
-	// ✅ Consul (Docker-safe address)
+	// Consul (Docker-safe address)
 	addr := "consul:8500"
 
 	agent := consul.NewAgent(&api.Config{
@@ -97,7 +97,7 @@ func main() {
 		Tags:        []string{"grpc", "auth"},
 		Port:        50053,
 
-		// ✅ HTTP health check (matches new consul package)
+		// HTTP health check (matches new consul package)
 		Check: &api.AgentServiceCheck{
 			HTTP:     "http://auth-service:8080/health",
 			Interval: "10s",
@@ -105,12 +105,12 @@ func main() {
 		},
 	}
 
-	// ✅ Register service (now returns error)
+	// Register service (now returns error)
 	if err := agent.RegisterService(serviceCfg); err != nil {
 		log.Fatalf("failed to register service: %v", err)
 	}
 
-	// ✅ Start HTTP server (metrics + health)
+	// Start HTTP server (metrics + health)
 	go func() {
 		http.Handle("/metrics", promhttp.Handler())
 
@@ -125,7 +125,7 @@ func main() {
 		}
 	}()
 
-	// ✅ gRPC server
+	// gRPC server
 	lis, err := net.Listen("tcp", ":50053")
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)

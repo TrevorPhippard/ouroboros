@@ -19,6 +19,7 @@ import (
 
 	"github.com/hashicorp/consul/api"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/segmentio/kafka-go"
 )
 
 // DB models — renamed so they do not collide with pb.Post / pb.Comment
@@ -50,7 +51,7 @@ func connectDB(dbURL string) *gorm.DB {
 }
 
 func main() {
-	// ✅ Consul (Docker-safe)
+	// Consul (Docker-safe)
 	addr := "consul:8500"
 
 	agent := consul.NewAgent(&api.Config{
@@ -64,7 +65,7 @@ func main() {
 		Tags:        []string{"grpc", "post"},
 		Port:        50057,
 
-		// ✅ HTTP health check (consistent with all services)
+		// HTTP health check (consistent with all services)
 		Check: &api.AgentServiceCheck{
 			HTTP:     "http://post-service:8080/health",
 			Interval: "10s",
@@ -72,7 +73,7 @@ func main() {
 		},
 	}
 
-	// ✅ Register service
+	// Register service
 	if err := agent.RegisterService(serviceCfg); err != nil {
 		log.Fatalf("failed to register service: %v", err)
 	}
@@ -92,7 +93,7 @@ func main() {
 
 	seedDB(db)
 
-	// ✅ HTTP server (metrics + health)
+	// HTTP server (metrics + health)
 	go func() {
 		http.Handle("/metrics", promhttp.Handler())
 
@@ -113,8 +114,20 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
+	writer := &kafka.Writer{
+		Addr:     kafka.TCP("kafka:9092"),
+		Topic:    "posts.created",
+		Balancer: &kafka.LeastBytes{},
+	}
+
+	// inject into service
+	postService := &PostServiceServer{
+		DB:     db,
+		Writer: writer,
+	}
+
 	s := grpc.NewServer()
-	pb.RegisterPostServiceServer(s, &PostServiceServer{DB: db})
+	pb.RegisterPostServiceServer(s, postService)
 
 	reflection.Register(s)
 
