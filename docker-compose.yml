@@ -43,9 +43,14 @@ services:
     ports:
       - "9000:9000"
     environment:
-      - KAFKA_BROKERCONNECT=kafka:9092
+      KAFKA_BROKERCONNECT: kafka:9092
+      KAFKA_PROPERTIES: security.protocol=PLAINTEXT
+      JVM_OPTS: "-Xms32M -Xmx64M"
+      SERVER_PORT: 9000
     depends_on:
       - kafka
+    networks:
+      - mesh
 
   # ==========================================
   # CACHE

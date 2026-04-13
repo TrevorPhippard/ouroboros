@@ -77,7 +77,7 @@ func main() {
 
 	log.Println("Connected to profile_db")
 
-	if err := db.AutoMigrate(&Profile{}); err != nil {
+	if err := db.AutoMigrate(&Profile{}, &Experience{}); err != nil {
 		log.Fatalf("migration failed: %v", err)
 	}
 
@@ -105,7 +105,7 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	pb.RegisterProfileServiceServer(s, &profileServiceServer{})
+	pb.RegisterProfileServiceServer(s, &profileServiceServer{db: db})
 
 	reflection.Register(s)
 
