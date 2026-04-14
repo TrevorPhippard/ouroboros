@@ -4,10 +4,10 @@ import (
 	"context"
 	"log"
 	pb "ouroboros/proto/generated/profile"
+	"profile/internal/models"
 
 	"gorm.io/gorm"
 )
-
 
 type profileServiceServer struct {
 	pb.UnimplementedProfileServiceServer
@@ -18,7 +18,7 @@ type profileServiceServer struct {
 func (s *profileServiceServer) GetProfile(ctx context.Context, req *pb.GetProfileRequest) (*pb.Profile, error) {
 	log.Printf("Profile Service: Fetching profile for User: %s", req.UserId)
 
-	var profile Profile
+	var profile models.Profile
 	if err := s.db.Where("user_id = ?", req.UserId).First(&profile).Error; err != nil {
 		return nil, err
 	}
@@ -39,7 +39,7 @@ func (s *profileServiceServer) GetProfile(ctx context.Context, req *pb.GetProfil
 func (s *profileServiceServer) GetProfilesByUserIds(ctx context.Context, req *pb.GetProfilesByUserIdsRequest) (*pb.GetProfilesByUserIdsResponse, error) {
 	log.Printf("Profile Service: Batch fetching %d profiles", len(req.UserIds))
 
-	var profiles []Profile
+	var profiles []models.Profile
 	if err := s.db.Where("user_id IN ?", req.UserIds).Find(&profiles).Error; err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func (s *profileServiceServer) GetProfilesByUserIds(ctx context.Context, req *pb
 func (s *profileServiceServer) UpdateProfile(ctx context.Context, req *pb.UpdateProfileRequest) (*pb.UpdateProfileResponse, error) {
 	log.Printf("Profile Service: Updating profile for User: %s", req.UserId)
 
-	var profile Profile
+	var profile models.Profile
 	if err := s.db.Where("user_id = ?", req.UserId).First(&profile).Error; err != nil {
 		return nil, err
 	}

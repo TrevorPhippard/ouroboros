@@ -12,13 +12,14 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
-	"profile/internal/consul"
+	"profile/internal/database"
+	"profile/internal/discovery"
+	"profile/internal/messaging"
+	"profile/internal/service"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-
-	"github.com/hashicorp/consul/api"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func connectDB(dbURL string) *gorm.DB {
@@ -40,48 +41,14 @@ func connectDB(dbURL string) *gorm.DB {
 }
 
 func main() {
-	// Consul (Docker-safe DNS)
-	addr := "consul:8500"
-
-	agent := consul.NewAgent(&api.Config{
-		Address: addr,
-	})
-
-	serviceCfg := consul.Config{
-		ServiceID:   "profile-service-1",
-		ServiceName: "profile-service",
-		Address:     "profile-service",
-		Tags:        []string{"grpc", "profile"},
-		Port:        50058,
-
-		// HTTP health check (standardized across system)
-		Check: &api.AgentServiceCheck{
-			HTTP:     "http://profile-service:8080/health",
-			Interval: "10s",
-			Timeout:  "2s",
-		},
-	}
-
-	// Register service with Consul
-	if err := agent.RegisterService(serviceCfg); err != nil {
-		log.Fatalf("failed to register service: %v", err)
-	}
-
-	// DB setup
+	// 1. Setup Infrastructure
 	dbURL := os.Getenv("DB_URL")
-	if dbURL == "" {
-		log.Fatal("DB_URL environment variable is not set")
-	}
+	db := database.Connect(dbURL)
+	database.Migrate(db)
+	database.SeedDB(db)
 
-	db := connectDB(dbURL)
-
-	log.Println("Connected to profile_db")
-
-	if err := db.AutoMigrate(&Profile{}, &Experience{}); err != nil {
-		log.Fatalf("migration failed: %v", err)
-	}
-
-	seedDB(db)
+	writer := messaging.NewProfileProducer("kafka:9092", "posts.created")
+	discovery.Register("consul:8500", "profile-service", 50058)
 
 	// HTTP server (metrics + health)
 	go func() {
@@ -105,12 +72,11 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	pb.RegisterProfileServiceServer(s, &profileServiceServer{db: db})
-
+	profileService := &service.ProfileServiceServer{DB: db, Writer: writer}
+	pb.RegisterProfileServiceServer(s, profileService)
 	reflection.Register(s)
 
 	log.Println("Profile Service (gRPC) running on :50058")
-
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
