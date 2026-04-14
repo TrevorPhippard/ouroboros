@@ -41,7 +41,21 @@ func NewAgent(consulConfig *api.Config) *Agent {
 /* -------------------------------------------------------------------------- */
 
 func (a *Agent) RegisterService(cfg Config) error {
-	// Service registration
+	registration := a.buildRegistration(cfg)
+
+	if err := a.startServiceWatch(cfg.ServiceName); err != nil {
+		return err
+	}
+
+	if err := a.client.Agent().ServiceRegister(registration); err != nil {
+		return fmt.Errorf("service registration error: %w", err)
+	}
+
+	log.Printf("Registered service: %s", cfg.ServiceName)
+	return nil
+}
+
+func (a *Agent) buildRegistration(cfg Config) *api.AgentServiceRegistration {
 	registration := &api.AgentServiceRegistration{
 		ID:      cfg.ServiceID,
 		Name:    cfg.ServiceName,
@@ -50,63 +64,61 @@ func (a *Agent) RegisterService(cfg Config) error {
 		Port:    cfg.Port,
 	}
 
-	// Attach health check if provided
 	if cfg.Check != nil {
 		registration.Check = cfg.Check
 	}
 
-	/* ---------------------------------------------------------------------- */
-	/*                         WATCH FOR NEW SERVICE INSTANCES                */
-	/* ---------------------------------------------------------------------- */
+	return registration
+}
 
-	query := map[string]any{
+func (a *Agent) startServiceWatch(serviceName string) error {
+	plan, err := watch.Parse(map[string]any{
 		"type":        "service",
-		"service":     cfg.ServiceName,
+		"service":     serviceName,
 		"passingonly": true,
-	}
-
-	plan, err := watch.Parse(query)
+	})
 	if err != nil {
 		return fmt.Errorf("consul watch parse error: %w", err)
 	}
 
-	plan.HybridHandler = func(_ watch.BlockingParamVal, result any) {
-		entries, ok := result.([]*api.ServiceEntry)
-		if !ok {
-			return
-		}
+	plan.HybridHandler = a.handleServiceEntries
 
-		for _, entry := range entries {
-			if entry == nil || entry.Service == nil {
-				continue
-			}
-
-			id := entry.Service.ID
-			if !a.seenInstances[id] {
-				a.seenInstances[id] = true
-				fmt.Printf(
-					"🟢 New instance joined: %s (Address=%s Port=%d)\n",
-					entry.Service.ID,
-					entry.Service.Address,
-					entry.Service.Port,
-				)
-			}
-		}
-	}
-
-	// Run watch using SAME consul config (important fix)
 	go func() {
 		if err := plan.RunWithClientAndHclog(a.client, nil); err != nil {
 			log.Println("consul watch error:", err)
 		}
 	}()
 
-	// Register service
-	if err := a.client.Agent().ServiceRegister(registration); err != nil {
-		return fmt.Errorf("service registration error: %w", err)
+	return nil
+}
+
+func (a *Agent) handleServiceEntries(_ watch.BlockingParamVal, result any) {
+	entries, ok := result.([]*api.ServiceEntry)
+	if !ok {
+		return
 	}
 
-	log.Printf("Registered service: %s", cfg.ServiceName)
+	for _, entry := range entries {
+		a.processEntry(entry)
+	}
+}
 
-	return nil
+func (a *Agent) processEntry(entry *api.ServiceEntry) {
+	if entry == nil || entry.Service == nil {
+		return
+	}
+
+	id := entry.Service.ID
+	if a.seenInstances[id] {
+		return
+	}
+
+	a.seenInstances[id] = true
+
+	fmt.Printf(
+		"🟢 New instance joined: %s (Address=%s Port=%d)\n",
+		entry.Service.ID,
+		entry.Service.Address,
+		entry.Service.Port,
+	)
 }

@@ -1,14 +1,40 @@
-package main
+package database
 
 import (
 	"log"
+	"profile/internal/models" // Update with your actual module name
+	"time"
 
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-func seedDB(db *gorm.DB) {
+func Connect(dbURL string) *gorm.DB {
+	var db *gorm.DB
+	var err error
+
+	for i := 0; i < 10; i++ {
+		db, err = gorm.Open(postgres.Open(dbURL), &gorm.Config{})
+		if err == nil {
+			return db
+		}
+		log.Println("Waiting for DB...")
+		time.Sleep(2 * time.Second)
+	}
+
+	log.Fatal("Failed to connect to DB:", err)
+	return nil
+}
+
+func Migrate(db *gorm.DB) {
+	if err := db.AutoMigrate(&models.Profile{}); err != nil {
+		log.Fatalf("migration failed: %v", err)
+	}
+}
+
+func SeedDB(db *gorm.DB) {
 	var postCount int64
-	db.Model(&Profile{}).Count(&postCount)
+	db.Model(&models.Profile{}).Count(&postCount)
 
 	// Only seed if empty
 	if postCount > 0 {
@@ -18,7 +44,7 @@ func seedDB(db *gorm.DB) {
 
 	log.Println("Seeding database...")
 
-	Profile := []Profile{
+	Profile := []models.Profile{
 		{
 			ID:          "profile-1",
 			UserId:      "user-1",

@@ -14,12 +14,11 @@ import {
   LogOut,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-
-  // const { isAuthenticated, logout, user } = useAuthStore();
+import { SignOutButton } from "@/features/auth/components/SignOutButton"
 
 export const Navbar = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
-  const { isAuthenticated, logout, user } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore()
 
   // Mock notification counts - these would come from TanStack Query polling
   const unreadNotifications = 3
@@ -85,7 +84,10 @@ export const Navbar = () => {
               className="group flex flex-col items-center"
             >
               <img
-                src={user?.avatarUrl || "https://avatars.githubusercontent.com/u/8942758?v=4"}
+                src={
+                  user?.avatarUrl ||
+                  "https://avatars.githubusercontent.com/u/8942758?v=4"
+                }
                 alt="Profile"
                 className="h-6 w-6 rounded-full border border-gray-200"
               />
@@ -111,13 +113,9 @@ export const Navbar = () => {
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={() => logout()}
-                  className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-gray-600 hover:bg-gray-50"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Sign Out
-                </button>
+                <div className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-gray-600 hover:bg-gray-50">
+                  <SignOutButton />
+                </div>
               </div>
             )}
           </div>

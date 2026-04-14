@@ -1,6 +1,7 @@
 import { gqlRequest } from "@/services/graphql/client"
 import { GET_FEED } from "@/lib/queries"
 import { PostType } from "../schemas"
+import { feedResolvers } from "@/services/graphql/mocks/feed/resolvers"
 
 interface FeedPageData {
   feed: {
@@ -13,12 +14,21 @@ interface FeedPageData {
 
 export const useFeedQuery = () => ({
   queryKey: ["feed"],
+  // queryFn: async ({ pageParam }: { pageParam: string | null }) => {
+  //   const response = await gqlRequest({
+  //     query: GET_FEED,
+  //     variables: { userId: "user_01", cursor: pageParam },
+  //   })
+  //   console.log("GraphQL Response:", response)
+  //   return response
+  // },
   queryFn: async ({ pageParam }: { pageParam: string | null }) => {
-    const response = await gqlRequest({
-      query: GET_FEED,
-      variables: { userId: "user_01", cursor: pageParam },
+    const response = feedResolvers.getFeed({
+      cursor: pageParam,
+      limit: 2,
     })
-    console.log("GraphQL Response:", response) // Debug here
+
+    console.log("Mock Response:", response)
     return response
   },
   initialPageParam: null,

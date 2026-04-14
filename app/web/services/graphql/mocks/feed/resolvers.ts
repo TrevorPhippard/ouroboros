@@ -69,7 +69,17 @@ export const feedResolvers = {
   // Query: Fetch feed with pagination
   getFeed: (variables: { cursor: string | null; limit?: number }) => {
     const limit = variables.limit || 2
-    return generateMorePosts(variables.cursor, limit)
+    const result = generateMorePosts(variables.cursor, limit)
+
+    return {
+      feed: {
+        items: result.edges.map((post) => ({
+          id: post.id,
+          post, // 👈 matches `post.post` in your component
+        })),
+        pageInfo: result.pageInfo,
+      },
+    }
   },
 
   // Mutation: Like/Unlike logic

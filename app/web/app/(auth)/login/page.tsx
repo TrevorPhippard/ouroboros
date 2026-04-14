@@ -2,8 +2,6 @@
 
 import { SignInForm } from "@/features/auth/components/SignInForm"
 
-import { SignUpForm } from "@/features/auth/components/SignUpForm"
-
 import Link from "next/link"
 
 export default function LoginPage() {

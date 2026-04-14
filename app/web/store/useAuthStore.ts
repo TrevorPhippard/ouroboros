@@ -19,7 +19,12 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
-      user: null,
+      user: {
+        id: "u1",
+        email: "test@example.com",
+        name: "Test User",
+        avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=testuser",
+      },
       token: null,
       isAuthenticated: false,
       setAuth: (user, token) => set({ user, token, isAuthenticated: true }),

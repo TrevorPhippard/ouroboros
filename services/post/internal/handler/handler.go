@@ -1,9 +1,10 @@
-package main
+package handler
 
 import (
 	"context"
 	"encoding/json"
 	pb "ouroboros/proto/generated/post"
+	"post/internal/models"
 	"time"
 
 	"github.com/google/uuid"
@@ -30,7 +31,7 @@ type PostCreatedEvent struct {
 }
 
 func (s *PostServiceServer) CreatePost(ctx context.Context, req *pb.CreatePostRequest) (*pb.Post, error) {
-	post := DBPost{
+	post := &models.DBPost{
 		ID:        uuid.NewString(),
 		AuthorID:  req.AuthorId,
 		Content:   req.Content,
@@ -72,7 +73,7 @@ func (s *PostServiceServer) CreatePost(ctx context.Context, req *pb.CreatePostRe
 }
 
 func (s *PostServiceServer) GetPost(ctx context.Context, req *pb.GetPostRequest) (*pb.Post, error) {
-	var post DBPost
+	var post *models.DBPost
 
 	if err := s.DB.First(&post, "id = ?", req.Id).Error; err != nil {
 		return nil, err
@@ -87,7 +88,7 @@ func (s *PostServiceServer) GetPost(ctx context.Context, req *pb.GetPostRequest)
 }
 
 func (s *PostServiceServer) GetPosts(ctx context.Context, req *pb.GetPostsByIdsRequest) (*pb.GetPostsByIdsResponse, error) {
-	var dbPosts []DBPost
+	var dbPosts []*models.DBPost
 
 	result := s.DB.Where("author_id = ?", req.Ids).Find(&dbPosts)
 	if result.Error != nil {

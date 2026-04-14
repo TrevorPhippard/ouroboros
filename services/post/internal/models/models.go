@@ -1,4 +1,4 @@
-package main
+package models
 
 import (
 	"time"
@@ -19,10 +19,18 @@ type DBPost struct {
 	CreatedAt time.Time `gorm:"not null"`
 }
 
+func (DBPost) TableName() string {
+	return "posts"
+}
+
 type DBComment struct {
 	ID        string    `gorm:"primaryKey"`
 	PostID    string    `gorm:"column:post_id;not null"`
 	AuthorID  string    `gorm:"column:author_id;not null"`
 	Content   string    `gorm:"not null"`
 	CreatedAt time.Time `gorm:"not null"`
+}
+
+func (DBComment) TableName() string {
+	return "comments"
 }

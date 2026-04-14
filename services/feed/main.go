@@ -10,9 +10,8 @@ import (
 
 	pbFeed "ouroboros/proto/generated/feed"
 
-	"feed/internal/consul"
+	"feed/internal/discovery"
 
-	"github.com/hashicorp/consul/api"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/segmentio/kafka-go"
 	"google.golang.org/grpc"
@@ -49,28 +48,8 @@ func (s *feedServiceServer) GetFeed(ctx context.Context, req *pbFeed.GetFeedRequ
 }
 
 func main() {
-	addr := "consul:8500"
 
-	agent := consul.NewAgent(&api.Config{
-		Address: addr,
-	})
-
-	serviceCfg := consul.Config{
-		ServiceID:   "feed-service-1",
-		ServiceName: "feed-service",
-		Address:     "feed-service",
-		Tags:        []string{"grpc", "feed"},
-		Port:        50055,
-		Check: &api.AgentServiceCheck{
-			HTTP:     "http://feed-service:8080/health",
-			Interval: "10s",
-			Timeout:  "2s",
-		},
-	}
-
-	if err := agent.RegisterService(serviceCfg); err != nil {
-		log.Fatalf("failed to register service: %v", err)
-	}
+	discovery.Register("consul:8500", "post-service", 50055)
 
 	feedServer := &feedServiceServer{
 		feed: make(map[string][]*pbFeed.FeedItem),
@@ -121,27 +100,24 @@ func main() {
 			if len(feedServer.feed) == 0 {
 				feedServer.feed["test-user"] = []*pbFeed.FeedItem{item}
 			}
-
 			feedServer.mu.Unlock()
 		}
 	}()
 
-	// HTTP server
+	// 2. Start HTTP Server (Metrics + Health)
 	go func() {
 		http.Handle("/metrics", promhttp.Handler())
-
 		http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("OK"))
 		})
-
 		log.Println("HTTP server running on :8080 (metrics + health)")
 		if err := http.ListenAndServe(":8080", nil); err != nil {
 			log.Fatalf("failed to start HTTP server: %v", err)
 		}
 	}()
 
-	// gRPC server
+	// 3. Start gRPC Server
 	lis, err := net.Listen("tcp", ":50055")
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
@@ -149,11 +125,9 @@ func main() {
 
 	s := grpc.NewServer()
 	pbFeed.RegisterFeedServiceServer(s, feedServer)
-
 	reflection.Register(s)
 
 	log.Println("Feed Service (gRPC) running on :50055")
-
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
