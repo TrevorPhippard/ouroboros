@@ -18,7 +18,8 @@ The application supports core social workflows including authentication, profile
 - SignIn
 - SignOut
 
-### Tech I hope to use
+### Tech
+
 - nextjs
 - tanstack-query
 - zustand
@@ -34,7 +35,7 @@ The application supports core social workflows including authentication, profile
 - rabbitMQ
 - pactflow
 - consul
-- prometheus 
+- prometheus
 
 ### What this documentation covers
 
@@ -68,7 +69,11 @@ Consul:     <http://localhost:8500/ui/dc1/services>
 Prometheus: <http://localhost:9090/query>
 
 ### pgAdmin
-https://www.youtube.com/watch?v=7uXbWTLIHJo
+
+### pgAdmin
+
+
+<https://www.youtube.com/watch?v=7uXbWTLIHJo>
 
 Host name/address: postgres
 Port: 5432
