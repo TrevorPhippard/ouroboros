@@ -286,8 +286,3 @@ accessed 17 April 2026.
 'The echo chamber effect on social media', Proceedings of the National Academy of Sciences (2021) <https://pmc.ncbi.nlm.nih.gov/articles/PMC7936330/>
 accessed 17 April 2026.
 
-'Social Media Addiction and Poor Mental Health: Examining the Mediating Roles of Internet Addiction and Phubbing', PubMed (2023) <https://pubmed.ncbi.nlm.nih.gov/36972903/>
-accessed 17 April 2026.
-
-'The echo chamber effect on social media', Proceedings of the National Academy of Sciences (2021) <https://pmc.ncbi.nlm.nih.gov/articles/PMC7936330/>
-accessed 17 April 2026.
