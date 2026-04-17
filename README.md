@@ -276,7 +276,7 @@ Typical variables:
 
 MIT
 
-### citations
+### Citations
 
 accessed 17 April 2026.
 
