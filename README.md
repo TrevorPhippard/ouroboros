@@ -1,4 +1,4 @@
-![ouroboros_logo](https://github.com/TrevorPhippard/ouroboros/blob/main/app/web/public/mini.svg)
+<img src="https://raw.githubusercontent.com/TrevorPhippard/ouroboros/main/app/web/public/mini.svg" alt="Sample Image" width="150" />
 
 # Ouroboros
 
