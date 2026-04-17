@@ -1,170 +1,293 @@
-![ouroboros_logo](https://github.com/TrevorPhippard/ouroboros/blob/main/app/web/public/cleo_mini.png)
+<img src="https://raw.githubusercontent.com/TrevorPhippard/ouroboros/main/app/web/public/mini.svg" alt="Sample Image" width="150" />
 
-# ouroboros
+# Ouroboros
 
-A modern social networking platform.
+> A social network without algorithms — just people.
 
-The application supports core social workflows including authentication, profile management, posting, feed retrieval, recommendations, connect requests, and notifications. The GraphQL operations supplied for this draft are:
+![Status](https://img.shields.io/badge/status-in%20development-yellow)
+![Backend](https://img.shields.io/badge/backend-Go-blue)
+![Frontend](https://img.shields.io/badge/frontend-Next.js-black)
+![API](https://img.shields.io/badge/API-GraphQL%20%2B%20gRPC-purple)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-- GetFeed
-- GetProfile
-- UpdateProfile
-- CreatePost
-- LikePost
-- GetUnreadNotifications
-- GetRecommendations
-- SendConnect
-- SignUp
-- SignIn
-- SignOut
+---
 
-### Tech
+## Table of Contents
 
-- nextjs
-- tanstack-query
-- zustand
-- shadcn
-- tailwindcss
-- graphql
-- gRPC
-- golang
-- docker
-- neo4j
-- postgres
-- kafka
-- rabbitMQ
-- pactflow
-- consul
-- prometheus
+- [Overview](#overview)
+- [Why This Exists](#why-this-exists)
+- [What Makes It Different](#what-makes-it-different)
+- [Features](#features)
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [Tech Stack](#tech-stack)
+- [Architecture](#architecture)
+- [Project Structure](#project-structure)
+- [Core Services](#core-services)
+- [Development](#development)
+- [Environment Variables](#environment-variables)
+- [Troubleshooting](#troubleshooting)
+- [Changelog](#changelog)
+- [Future Work](#future-work)
 
-### What this documentation covers
+---
 
-- Project overview and architecture
-- Local setup and deployment flow
-- GraphQL operation reference
-- gRPC service reference placeholder
-- Frontend route reference placeholder
-- Step-by-step tutorials
-- Troubleshooting and FAQ
-- Changelog structure by release
+## Overview
+
+Ouroboros is a modern social platform designed to remove algorithmic manipulation and bring back intentional, human-centered interaction.
+
+---
+
+## Why This Exists
+
+Most platforms optimize for engagement—not well-being.
+
+This leads to:
+
+- Addictive scrolling loops
+- Echo chambers
+- Amplified misinformation
+- Content shaped by algorithms instead of people
+
+---
+
+## What Makes It Different
+
+- Chronological feed only (no ranking algorithms)
+- No engagement optimization loops
+- Connection-first design
+- Minimalist feature set
+
+---
+
+## Features
+
+- Chronological feed
+- User profiles
+- Posts and likes
+- Notifications
+- Connection system (follow/friend)
+- Authentication
+
+---
 
 ## Prerequisites
 
-- **Docker & Docker Compose:** Latest stable
-- **GraphQL endpoint access:** Ensure the GraphQL gateway is accessible
-- **Environment variables configured:** Set all required environment variables
+- Docker & Docker Compose: Latest stable
+- GraphQL endpoint access: Ensure the GraphQL gateway is accessible
+- Environment variables configured: Set all required environment variables
 
-### Installation
+---
 
-- Clone the repository.
-- Install frontend dependencies.
-- Install any service dependencies for the Go microservices.
-- Configure environment variables.
-- Start the frontend and backend services.
+## Quick Start
 
+```bash
+docker-compose up --build
+```
 
-### URLs
-- Frontend: <http://localhost:3000>, 
-- GraphQL playground: <http://localhost:4000/graphql>.
-- pgAdmin:    <http://localhost:8083/browser>
-- Consul:     <http://localhost:8500/ui/dc1/services>
-- Prometheus: <http://localhost:9090/query>
-- Kafdrop: <http://localhost:9000/>
+### Local Services
 
-### pgAdmin
+| Service            | URL                                     |
+| ------------------ | --------------------------------------- |
+| Frontend           | <http://localhost:3000>                 |
+| GraphQL Playground | <http://localhost:4000/graphql>         |
+| pgAdmin            | <http://localhost:8083/browser>         |
+| Consul             | <http://localhost:8500/ui/dc1/services> |
+| Prometheus         | <http://localhost:9090/query>           |
+| Kafdrop            | <http://localhost:9000>                 |
 
-### pgAdmin
+---
 
-
-<https://www.youtube.com/watch?v=7uXbWTLIHJo>
-
-Host name/address: postgres
-Port: 5432
-
-### Environment variables
-
-Create a .env.local file for the frontend and a matching environment file for services. The exact variable names should come from the repository, but the following categories are typically required:
-
-- GraphQL gateway URL
-- gRPC service hostnames and ports
-- Authentication secrets
-- Database connection strings
-- Notification or message broker endpoints, if used
-- Local development
-
-Run the frontend and backend services in development mode.
+## Tech Stack
 
 ### Frontend
 
-npm install
-npm run dev
+- Next.js
+- TanStack Query
+- Zustand
+- Tailwind CSS
+- shadcn/ui
 
-### Example Go service
+### Backend
 
+- Go (microservices)
+- GraphQL Gateway
+- gRPC
+
+### Infrastructure
+
+- PostgreSQL
+- Neo4j
+- Kafka
+- RabbitMQ
+- Consul
+- Prometheus
+- Docker
+
+---
+
+## Architecture
+
+Ouroboros uses a microservices architecture with GraphQL as the entry point.
+
+### High-Level Flow
+
+```text
+Client (Next.js)
+        ↓
+GraphQL Gateway
+        ↓
+-----------------------------
+|   Go Microservices        |
+|---------------------------|
+| Auth Service              |
+| Feed Service              |
+| Post Service              |
+| Profile Service           |
+| Connection Service        |
+| Notification Service      |
+-----------------------------
+        ↓
+Data Layer
+(Postgres + Neo4j)
+        ↓
+Event Layer
+(Kafka / RabbitMQ)
 ```
-# Frontend
+
+---
+
+## Why GraphQL + gRPC?
+
+- **GraphQL** → flexible client queries
+- **gRPC** → fast internal communication
+
+Benefits:
+
+- Clean separation of concerns
+- Strong typing across services
+- High performance
+
+[API Reference](https://github.com/TrevorPhippard/ouroboros/blob/main/documentation/GraphQL_API.md)
+
+---
+
+## Project Structure
+
+```text
+/apps
+  /frontend
+
+/services
+  /auth
+  /feed
+  /post
+  /profile
+  /connection
+  /notification
+
+/packages
+  /graphql-gateway
+  /proto
+```
+
+---
+
+## Core Services
+
+| Service      | Responsibility                |
+| ------------ | ----------------------------- |
+| Auth         | Authentication & sessions     |
+| Feed         | Chronological feed generation |
+| Post         | Post creation & interactions  |
+| Profile      | User data management          |
+| Connection   | Social graph relationships    |
+| Notification | User notifications            |
+
+---
+
+## Observability
+
+Ouroboros includes basic system observability:
+
+- Prometheus for metrics
+- Structured logging across Go services
+- Health check endpoints on all services
+- Consul for service discovery
+
+---
+
+## Development
+
+### Frontend
+
+```bash
 npm install
 npm run dev
+```
 
-# Example Go service
+### Go Service
+
+```bash
 go test ./...
 go run ./cmd/<service-name>
 ```
 
-### Deployment
+---
 
-Deployment should follow the repository's CI/CD process once provided. A standard flow is:
+## Environment Variables
 
-```
-1 Build the frontend.
-2. Build each Go service.
-3. Run tests.
-4. Run linting.
-5. Publish container images.
-6. Deploy to the target environment.
-7. Verify GraphQL health and service readiness.
-```
+Create:
 
-# Reference
+- `.env.local` (frontend)
+- Service-specific `.env` files
 
-### GraphQL API
+Typical variables:
 
-The GraphQL operations below are based only on the query and mutation definitions you supplied.
+- GraphQL endpoint
+- gRPC service addresses
+- Database URLs
+- Auth secrets
+- Message broker configs
 
-### Common patterns
+---
 
-IDs are passed as ID!.
-Inputs are passed as GraphQL input objects where defined.
-Mutations return only the fields selected in the operation.
-Query results should be treated as the response contract for the frontend.
+## Troubleshooting
 
-**_ pending link to GraphQL_API.md _**
+- Regenerate code after schema changes
+- Ensure GraphQL and gRPC contracts match
+- Verify services are registered in Consul
 
-### GraphQL usage example in JavaScript
+---
 
-```
+## Changelog
 
-pending
-```
-
-### gRPC API
-
-**_ pending link to gRPC_API.md  _**
-
-### GraphQL usage example in Go
-
+```text
+## [1.0.0] - 2026-04-01
+### Added
+- Initial microservices architecture
+- GraphQL gateway
+- Feed + Auth services
 ```
 
-pending
+---
 
-```
+## License
 
-# Troubleshooting & FAQ
+MIT
 
-After making changes to the GraphQL schema or gRPC proto files, ensure that all dependent services and frontend components are updated to match the new contract.
+### citations
 
-Commands in the makefile should be used to regenerate code and run tests after schema changes.
+accessed 17 April 2026.
 
-# Changelog / Release Notes
+'Social Media Addiction and Poor Mental Health: Examining the Mediating Roles of Internet Addiction and Phubbing', PubMed (2023) <https://pubmed.ncbi.nlm.nih.gov/36972903/>
+accessed 17 April 2026.
 
-I actually don't know how to write these
+'The echo chamber effect on social media', Proceedings of the National Academy of Sciences (2021) <https://pmc.ncbi.nlm.nih.gov/articles/PMC7936330/>
+accessed 17 April 2026.
+
+'Social Media Addiction and Poor Mental Health: Examining the Mediating Roles of Internet Addiction and Phubbing', PubMed (2023) <https://pubmed.ncbi.nlm.nih.gov/36972903/>
+accessed 17 April 2026.
+
+'The echo chamber effect on social media', Proceedings of the National Academy of Sciences (2021) <https://pmc.ncbi.nlm.nih.gov/articles/PMC7936330/>
+accessed 17 April 2026.
