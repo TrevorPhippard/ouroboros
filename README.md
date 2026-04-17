@@ -73,9 +73,9 @@ This leads to:
 
 ## Prerequisites
 
-Docker & Docker Compose: Latest stable
-GraphQL endpoint access: Ensure the GraphQL gateway is accessible
-Environment variables configured: Set all required environment variables
+- Docker & Docker Compose: Latest stable
+- GraphQL endpoint access: Ensure the GraphQL gateway is accessible
+- Environment variables configured: Set all required environment variables
 
 ---
 
