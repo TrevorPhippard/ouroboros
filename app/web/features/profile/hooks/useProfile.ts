@@ -1,21 +1,29 @@
 import { useQuery } from "@tanstack/react-query"
 import { ProfileType } from "../schemas"
 import { gqlRequest } from "@/services/graphql/client"
-import { GET_UNREAD_NOTIFICATIONS } from "@/lib/queries"
-import { profileResolvers } from "@/services/graphql/mocks/profile/resolvers"
+import { GET_PROFILE } from "@/lib/queries"
 
 export const useProfile = (userId: string) => {
   return useQuery<ProfileType>({
     queryKey: ["profile", userId],
-    // queryFn: () =>
-    //   gqlRequest({
-    //     query: GET_UNREAD_NOTIFICATIONS,
-    //     variables: { id: userId },
-    //   }),
-
     queryFn: async () => {
-      return profileResolvers.getProfile({ id: "u1" })
+      const response = await gqlRequest({
+        query: GET_PROFILE,
+        variables: { userId },
+      })
+
+      const user = response.user
+      return {
+        id: user.id,
+        name: user.displayName ?? user.username,
+        avatarUrl: user.avatarUrl ?? undefined,
+        headline: user.bio ?? "Add a short professional headline",
+        about: user.bio ?? "",
+        followersCount: user.followersCount ?? 0,
+        followingCount: user.followingCount ?? 0,
+        experiences: [],
+      }
     },
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    staleTime: 1000 * 60 * 5,
   })
 }

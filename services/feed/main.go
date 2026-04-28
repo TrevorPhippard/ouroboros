@@ -3,40 +3,80 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
+	"os"
+	"os/signal"
+	"strconv"
+	"strings"
+	"syscall"
+	"time"
 
 	"feed/internal/discovery"
 	pbFeed "ouroboros/proto/generated/feed"
-	pbPost "ouroboros/proto/generated/post"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/redis/go-redis/v9"
 	"github.com/segmentio/kafka-go"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/reflection"
-	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/grpc/status"
 )
 
-const (
-	feedMaxItems = 100
-	redisAddr    = "redis:6379"
-	kafkaAddr    = "kafka:9092"
-	postSvcAddr  = "post-service:50056"
-)
+func loggingUnaryInterceptor(
+	ctx context.Context,
+	req any,
+	info *grpc.UnaryServerInfo,
+	handler grpc.UnaryHandler,
+) (any, error) {
 
-type feedServiceServer struct {
-	pbFeed.UnimplementedFeedServiceServer
-	rdb        *redis.Client
-	postClient pbPost.PostServiceClient
+	start := time.Now()
+
+	p, _ := peer.FromContext(ctx)
+
+	log.Printf("[gRPC START] method=%s peer=%v req=%+v",
+		info.FullMethod,
+		p.Addr,
+		req,
+	)
+
+	resp, err := handler(ctx, req)
+
+	duration := time.Since(start)
+
+	st, _ := status.FromError(err)
+
+	log.Printf("[gRPC END] method=%s duration=%s status=%s err=%v",
+		info.FullMethod,
+		duration,
+		st.Code(),
+		err,
+	)
+
+	return resp, err
 }
+
+// Config constants
+const (
+	feedMaxSize     = 1000
+	defaultPageSize = 20
+	grpcPort        = ":50055"
+	httpPort        = ":8080"
+	redisAddr       = "redis:6379"
+	kafkaAddr       = "kafka:9092"
+)
+
+// --------------------
+// Models & Events
+// --------------------
 
 type PostCreatedEvent struct {
 	EventID   string `json:"eventId"`
-	Type      string `json:"type"`
 	Timestamp string `json:"timestamp"`
 	Data      struct {
 		PostID   string `json:"postId"`
@@ -45,90 +85,149 @@ type PostCreatedEvent struct {
 	} `json:"data"`
 }
 
-// --- gRPC HANDLERS ---
+// --------------------
+// Storage Layer
+// --------------------
 
-func (s *feedServiceServer) GetFeed(ctx context.Context, req *pbFeed.GetFeedRequest) (*pbFeed.GetFeedResponse, error) {
-	feedKey := fmt.Sprintf("feed:%s", req.UserId)
-
-	// 1. Fetch the "pointers"
-	postIDs, err := s.rdb.LRange(ctx, feedKey, 0, feedMaxItems-1).Result()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get timeline: %w", err)
-	}
-
-	if len(postIDs) == 0 {
-		return &pbFeed.GetFeedResponse{Items: []*pbFeed.FeedItem{}}, nil
-	}
-
-	// 2. Hydrate the IDs into full Post objects
-	items := s.hydrateFeed(ctx, postIDs)
-
-	return &pbFeed.GetFeedResponse{Items: items}, nil
+type FeedStore struct {
+	rdb *redis.Client
 }
 
-// --- BUSINESS LOGIC (ABSTRACTIONS) ---
+func NewFeedStore(addr string) *FeedStore {
+	return &FeedStore{rdb: redis.NewClient(&redis.Options{Addr: addr})}
+}
 
-func (s *feedServiceServer) hydrateFeed(ctx context.Context, postIDs []string) []*pbFeed.FeedItem {
-	entityKeys := make([]string, len(postIDs))
-	for i, id := range postIDs {
-		entityKeys[i] = fmt.Sprintf("p:%s", id)
-	}
+func (s *FeedStore) AddToFeed(ctx context.Context, userID string, item *pbFeed.FeedItem) error {
+	data, _ := json.Marshal(item)
+	key := fmt.Sprintf("feed:%s", userID)
 
-	contents, err := s.rdb.MGet(ctx, entityKeys...).Result()
+	pipe := s.rdb.TxPipeline()
+	pipe.LPush(ctx, key, data)
+	pipe.LTrim(ctx, key, 0, feedMaxSize-1)
+	_, err := pipe.Exec(ctx)
+	return err
+}
+
+func (s *FeedStore) SeedFeedIfEmpty(ctx context.Context, userID string, items []*pbFeed.FeedItem) error {
+	key := fmt.Sprintf("feed:%s", userID)
+
+	length, err := s.rdb.LLen(ctx, key).Result()
 	if err != nil {
-		log.Printf("MGet error: %v", err)
+		return err
+	}
+	if length > 0 {
 		return nil
 	}
 
-	var items []*pbFeed.FeedItem
-	for i, c := range contents {
-		postID := postIDs[i]
-
-		if c != nil {
-			if item, err := unmarshalFeedItem(c.(string)); err == nil {
-				items = append(items, item)
-				continue
-			}
+	pipe := s.rdb.TxPipeline()
+	for i := len(items) - 1; i >= 0; i-- {
+		data, err := json.Marshal(items[i])
+		if err != nil {
+			return err
 		}
-
-		// Cache Miss: Self-Heal
-		if item := s.fetchAndCachePost(ctx, postID); item != nil {
-			items = append(items, item)
-		}
+		pipe.LPush(ctx, key, data)
 	}
-	return items
+	pipe.LTrim(ctx, key, 0, feedMaxSize-1)
+
+	_, err = pipe.Exec(ctx)
+	return err
 }
 
-func (s *feedServiceServer) fetchAndCachePost(ctx context.Context, postID string) *pbFeed.FeedItem {
-	resp, err := s.postClient.GetPost(ctx, &pbPost.GetPostRequest{Id: postID})
+func (s *FeedStore) GetFeed(ctx context.Context, userID string, cursor string, limit int64) ([]*pbFeed.FeedItem, string, error) {
+	if limit <= 0 {
+		limit = defaultPageSize
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	var start int64
+	if cursor != "" {
+		parsed, err := strconv.ParseInt(cursor, 10, 64)
+		if err != nil || parsed < 0 {
+			return nil, "", status.Error(codes.InvalidArgument, "cursor must be a non-negative integer")
+		}
+		start = parsed
+	}
+
+	end := start + limit - 1
+
+	results, err := s.rdb.LRange(ctx, fmt.Sprintf("feed:%s", userID), start, end).Result()
 	if err != nil {
-		log.Printf("Fallback failed for %s: %v", postID, err)
+		return nil, "", err
+	}
+
+	items := make([]*pbFeed.FeedItem, 0, len(results))
+	for _, r := range results {
+		var item pbFeed.FeedItem
+		if err := json.Unmarshal([]byte(r), &item); err != nil {
+			log.Printf("feed-service: skipping malformed feed entry user_id=%s: %v", userID, err)
+			continue
+		}
+		items = append(items, &item)
+	}
+
+	nextCursor := ""
+	if len(results) == int(limit) {
+		nextCursor = strconv.FormatInt(end+1, 10)
+	}
+	return items, nextCursor, nil
+}
+
+func (s *FeedStore) CheckAndMarkProcessed(ctx context.Context, eventID string) (bool, error) {
+	key := fmt.Sprintf("processed:%s", eventID)
+	// Use SetNX for atomic check-and-set idempotency
+	ok, err := s.rdb.SetNX(ctx, key, "1", 24*time.Hour).Result()
+	return ok, err
+}
+
+// --------------------
+// Service Layer (Core Logic)
+// --------------------
+
+type FeedService struct {
+	pbFeed.UnimplementedFeedServiceServer
+	store  *FeedStore
+	social *SocialGraph
+}
+
+func (s *FeedService) GetFeed(ctx context.Context, req *pbFeed.GetFeedRequest) (*pbFeed.GetFeedResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "request is required")
+	}
+	if strings.TrimSpace(req.UserId) == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+
+	items, next, err := s.store.GetFeed(ctx, req.UserId, req.Cursor, int64(req.Limit))
+	if err != nil {
+		log.Printf("feed-service: failed to fetch feed user_id=%s: %v", req.UserId, err)
+		return nil, err
+	}
+	return &pbFeed.GetFeedResponse{Items: items, NextCursor: next}, nil
+}
+
+// HandlePostCreated performs the "Fan-out on Write" logic
+func (s *FeedService) HandlePostCreated(ctx context.Context, event PostCreatedEvent) error {
+	if strings.TrimSpace(event.EventID) == "" {
+		return status.Error(codes.InvalidArgument, "event_id is required")
+	}
+	if strings.TrimSpace(event.Data.PostID) == "" || strings.TrimSpace(event.Data.AuthorID) == "" {
+		return status.Error(codes.InvalidArgument, "post event must include post_id and author_id")
+	}
+
+	// Idempotency check
+	isNew, err := s.store.CheckAndMarkProcessed(ctx, event.EventID)
+	if err != nil || !isNew {
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 
-	item := &pbFeed.FeedItem{
-		PostId: resp.Post.Id,
-		Post: &pbFeed.Post{
-			Id:        resp.Post.Id,
-			AuthorId:  resp.Post.AuthorId,
-			Content:   resp.Post.Content,
-			Timestamp: resp.Post.Timestamp,
-		},
-	}
-
-	// Async update to Redis so we don't block the current request
-	go func() {
-		data, _ := protojson.Marshal(item)
-		s.rdb.Set(context.Background(), fmt.Sprintf("p:%s", postID), data, 0)
-	}()
-
-	return item
-}
-
-func (s *feedServiceServer) handlePostCreated(ctx context.Context, event PostCreatedEvent) {
-	// 1. Update Entity Cache
 	item := &pbFeed.FeedItem{
 		PostId: event.Data.PostID,
+		Cursor: event.Timestamp,
 		Post: &pbFeed.Post{
 			Id:        event.Data.PostID,
 			AuthorId:  event.Data.AuthorID,
@@ -136,94 +235,167 @@ func (s *feedServiceServer) handlePostCreated(ctx context.Context, event PostCre
 			Timestamp: event.Timestamp,
 		},
 	}
-	itemJSON, _ := protojson.Marshal(item)
-	s.rdb.Set(ctx, fmt.Sprintf("p:%s", event.Data.PostID), itemJSON, 0)
 
-	// 2. Fan-out IDs to followers (Simulated list)
-	followers := []string{"test-user", "another-user"}
+	followers, err := s.social.GetFollowers(ctx, event.Data.AuthorID)
+	if err != nil {
+		return err
+	}
+
 	for _, userID := range followers {
-		key := fmt.Sprintf("feed:%s", userID)
-		pipe := s.rdb.Pipeline()
-		pipe.LPush(ctx, key, event.Data.PostID)
-		pipe.LTrim(ctx, key, 0, feedMaxItems-1)
-		if _, err := pipe.Exec(ctx); err != nil {
-			log.Printf("Fan-out failed for %s: %v", userID, err)
+		if err := s.store.AddToFeed(ctx, userID, item); err != nil {
+			log.Printf("failed to update feed for user %s: %v", userID, err)
 		}
 	}
+	return nil
 }
 
-func runKafkaConsumer(s *feedServiceServer) {
+// --------------------
+// Infrastructure / Transport
+// --------------------
+
+type SocialGraph struct{}
+
+func (g *SocialGraph) GetFollowers(ctx context.Context, userID string) ([]string, error) {
+	if strings.TrimSpace(userID) == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+	return []string{"user-1", "user-2", "user-3", userID}, nil
+}
+
+func runKafkaConsumer(ctx context.Context, svc *FeedService) {
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers: []string{kafkaAddr},
 		Topic:   "posts.created",
 		GroupID: "feed-service",
 	})
+	defer reader.Close()
 
+	log.Println("Kafka Consumer started...")
 	for {
-		msg, err := reader.ReadMessage(context.Background())
+		msg, err := reader.ReadMessage(ctx)
 		if err != nil {
+			if ctx.Err() != nil {
+				return
+			} // Normal shutdown
 			log.Printf("Kafka error: %v", err)
 			continue
 		}
 
 		var event PostCreatedEvent
-		if err := json.Unmarshal(msg.Value, &event); err == nil {
-			s.handlePostCreated(context.Background(), event)
+		if err := json.Unmarshal(msg.Value, &event); err != nil {
+			log.Printf("feed-service: failed to decode post-created event: %v", err)
+			continue
+		}
+
+		if err := svc.HandlePostCreated(ctx, event); err != nil {
+			if errors.Is(err, context.Canceled) {
+				return
+			}
+			log.Printf("feed-service: worker error: %v", err)
 		}
 	}
 }
 
-// --- HELPERS ---
-
-func unmarshalFeedItem(data string) (*pbFeed.FeedItem, error) {
-	item := &pbFeed.FeedItem{}
-	err := protojson.Unmarshal([]byte(data), item)
-	return item, err
-}
-
-func mustDialGRPC(addr string) *grpc.ClientConn {
-	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		log.Fatalf("failed to connect to %s: %v", addr, err)
+func seedMockFeed(ctx context.Context, store *FeedStore) error {
+	items := []*pbFeed.FeedItem{
+		{
+			PostId: "post-3",
+			Cursor: "0",
+			Post: &pbFeed.Post{
+				Id:        "post-3",
+				AuthorId:  "user-3",
+				Content:   "Observability before optimization still wins most weeks.",
+				Timestamp: "2026-04-27T09:10:00Z",
+			},
+		},
+		{
+			PostId: "post-2",
+			Cursor: "1",
+			Post: &pbFeed.Post{
+				Id:        "post-2",
+				AuthorId:  "user-2",
+				Content:   "GraphQL is a lot nicer when the joins are explicit and cheap.",
+				Timestamp: "2026-04-27T09:05:00Z",
+			},
+		},
+		{
+			PostId: "post-1",
+			Cursor: "2",
+			Post: &pbFeed.Post{
+				Id:        "post-1",
+				AuthorId:  "user-1",
+				Content:   "Shipping the first cut of the feed service today.",
+				Timestamp: "2026-04-27T09:00:00Z",
+			},
+		},
 	}
-	return conn
+
+	if err := store.SeedFeedIfEmpty(ctx, "user-1", items); err != nil {
+		return err
+	}
+
+	log.Println("feed-service: ensured mock Redis feed for user-1")
+	return nil
 }
 
-func startHTTPServer() {
-	http.Handle("/metrics", promhttp.Handler())
-	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("OK")) })
-	log.Println("Metrics/Health on :8080")
-	http.ListenAndServe(":8080", nil)
-}
+// --------------------
+// Main Execution
+// --------------------
 
-func startGRPCServer(server *feedServiceServer) {
-	lis, err := net.Listen("tcp", ":50055")
+func main() {
+	// turn OS signals into context cancellation
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	// Initialize Dependencies
+	store := NewFeedStore(redisAddr)
+	if strings.EqualFold(os.Getenv("SEED_MOCK_FEED"), "true") {
+		if err := seedMockFeed(ctx, store); err != nil {
+			log.Printf("feed-service: failed to seed mock feed: %v", err)
+		}
+	}
+	service := &FeedService{
+		store:  store,
+		social: &SocialGraph{},
+	}
+
+	// 1. Start HTTP (Metrics/Health)
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.Handler())
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("OK")) })
+	httpSrv := &http.Server{Addr: httpPort, Handler: mux}
+	go httpSrv.ListenAndServe()
+
+	// 2. Start Kafka Consumer
+	go runKafkaConsumer(ctx, service)
+
+	// 3. Start gRPC Server
+	lis, err := net.Listen("tcp", grpcPort)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
-	s := grpc.NewServer()
-	pbFeed.RegisterFeedServiceServer(s, server)
-	reflection.Register(s)
-	log.Println("Feed Service gRPC on :50055")
-	s.Serve(lis)
-}
 
-func main() {
+	grpcSrv := grpc.NewServer(
+		grpc.UnaryInterceptor(loggingUnaryInterceptor),
+	)
+
+	pbFeed.RegisterFeedServiceServer(grpcSrv, service)
+	reflection.Register(grpcSrv)
 	discovery.Register("consul:8500", "feed-service", 50055)
 
-	rdb := redis.NewClient(&redis.Options{Addr: redisAddr})
-	postConn := mustDialGRPC(postSvcAddr)
-	defer postConn.Close()
+	go func() {
+		log.Printf("gRPC Server on %s", grpcPort)
+		if err := grpcSrv.Serve(lis); err != nil {
+			log.Printf("gRPC server failed: %v", err)
+		}
+	}()
 
-	server := &feedServiceServer{
-		rdb:        rdb,
-		postClient: pbPost.NewPostServiceClient(postConn),
-	}
+	// Wait for Shutdown Signal
+	<-ctx.Done()
+	log.Println("Shutting down gracefully...")
 
-	// Start Background Tasks
-	go runKafkaConsumer(server)
-	go startHTTPServer()
-
-	// Start Primary gRPC Service
-	startGRPCServer(server)
+	// Cleanup
+	grpcSrv.GracefulStop()
+	httpSrv.Shutdown(context.Background())
+	log.Println("Service stopped.")
 }

@@ -4,16 +4,23 @@ import { useState } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { gqlRequest } from "@/services/graphql/client"
 import { CREATE_POST } from "@/lib/queries"
+import { useAuthStore } from "@/store/useAuthStore"
 
 export default function CreatePost() {
   const [content, setContent] = useState("")
+  const userId = useAuthStore((state) => state.user?.id ?? "user-1")
   const queryClient = useQueryClient()
 
   const { mutateAsync, isPending } = useMutation({
     mutationFn: (content: string) =>
       gqlRequest({
         query: CREATE_POST,
-        variables: { content },
+        variables: {
+          input: {
+            authorId: userId,
+            content,
+          },
+        },
       }),
 
     onSuccess: () => {

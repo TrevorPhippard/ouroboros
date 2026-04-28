@@ -1,16 +1,21 @@
 import { gql } from "graphql-request"
 
 export const GET_FEED = gql`
-  query GetFeed($userId: ID!) {
-    feed(userId: $userId, limit: 10) {
+  query GetFeed($userId: ID!, $cursor: String) {
+    feed(userId: $userId, limit: 10, cursor: $cursor) {
       items {
         postId
         cursor
         post {
+          id
           content
+          createdAt
           author {
+            id
             username
+            displayName
             avatarUrl
+            bio
           }
         }
       }
@@ -19,17 +24,14 @@ export const GET_FEED = gql`
 `
 export const GET_PROFILE = gql`
   query GetProfile($userId: ID!) {
-    profile(id: $userId) {
+    user(id: $userId) {
       id
-      headline
-      about
-      experiences {
-        id
-        title
-        company
-        startDate
-        endDate
-      }
+      username
+      displayName
+      avatarUrl
+      bio
+      followersCount
+      followingCount
     }
   }
 `
@@ -45,10 +47,12 @@ export const UPDATE_PROFILE = gql`
 `
 
 export const CREATE_POST = gql`
-  mutation CreatePost($content: String!) {
-    createPost(content: $content) {
+  mutation CreatePost($input: CreatePostInput!) {
+    createPost(input: $input) {
       id
       content
+      createdAt
+      authorId
     }
   }
 `
@@ -57,17 +61,22 @@ export const LIKE_POST = gql`
   mutation LikePost($postId: ID!) {
     likePost(postId: $postId) {
       id
-      likes
+      content
+      createdAt
+      authorId
     }
   }
 `
 
-export const GET_UNREAD_NOTIFICATIONS = gql`
-  query GetUnreadNotifications($userId: ID!) {
-    unreadNotifications(userId: $userId) {
+export const GET_NOTIFICATIONS = gql`
+  query GetNotifications($userId: ID!) {
+    notifications(userId: $userId, limit: 20) {
       id
-      content
+      userId
+      type
+      actorId
       createdAt
+      read
     }
   }
 `
@@ -76,9 +85,10 @@ export const GET_RECOMMENDATIONS = gql`
   query GetRecommendations {
     recommendations {
       id
+      username
       displayName
-      headline
       avatarUrl
+      bio
     }
   }
 `

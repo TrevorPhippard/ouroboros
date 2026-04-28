@@ -1,4 +1,4 @@
-<img src="https://raw.githubusercontent.com/TrevorPhippard/ouroboros/main/app/web/public/mini.svg" alt="Sample Image" width="150" />
+![ouroboros_logo](https://github.com/TrevorPhippard/ouroboros/blob/main/app/web/public/mini.svg)
 
 # Ouroboros
 
@@ -73,9 +73,9 @@ This leads to:
 
 ## Prerequisites
 
-- Docker & Docker Compose: Latest stable
-- GraphQL endpoint access: Ensure the GraphQL gateway is accessible
-- Environment variables configured: Set all required environment variables
+Docker & Docker Compose: Latest stable
+GraphQL endpoint access: Ensure the GraphQL gateway is accessible
+Environment variables configured: Set all required environment variables
 
 ---
 
@@ -84,6 +84,8 @@ This leads to:
 ```bash
 docker-compose up --build
 ```
+
+For a testable feed on startup, set `SEED_MOCK_FEED=true` for `feed-service`. When enabled, `user-1` gets a Redis-backed mock feed if their feed key is empty.
 
 ### Local Services
 

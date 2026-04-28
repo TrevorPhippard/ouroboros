@@ -20,7 +20,10 @@ export const ProfileView = ({ userId }: { userId: string }) => {
       {/* Cover Photo */}
       <div className="relative h-48 w-full bg-gray-200">
         <img
-          src={profile.coverUrl}
+          src={
+            profile.avatarUrl ||
+            `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.id}`
+          }
           alt="Cover"
           className="h-full w-full object-cover"
         />
@@ -30,7 +33,10 @@ export const ProfileView = ({ userId }: { userId: string }) => {
         {/* Avatar positioned halfway over the cover photo */}
         <div className="absolute -top-16 rounded-full border-4 border-white bg-white">
           <img
-            src={profile.avatarUrl}
+            src={
+              profile.avatarUrl ||
+              `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.id}`
+            }
             alt={profile.name}
             className="h-32 w-32 rounded-full object-cover"
           />
@@ -41,7 +47,7 @@ export const ProfileView = ({ userId }: { userId: string }) => {
           <h1 className="text-2xl font-bold">{profile.name}</h1>
           <p className="mt-1 text-lg text-gray-800">{profile.headline}</p>
           <p className="mt-2 text-sm text-gray-500">
-            {profile.location} •{" "}
+            Professional profile •{" "}
             <span className="cursor-pointer font-semibold text-blue-600 hover:underline">
               {profile.connections} connections
             </span>

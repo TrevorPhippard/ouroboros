@@ -10,9 +10,13 @@ export const experienceSchema = z.object({
 
 export const profileSchema = z.object({
   id: z.string(),
+  name: z.string(),
+  avatarUrl: z.string().optional(),
   headline: z.string().min(5).max(120),
   about: z.string().max(2000).optional(),
-  experiences: z.array(experienceSchema),
+  followersCount: z.number().optional(),
+  followingCount: z.number().optional(),
+  experiences: z.array(experienceSchema).default([]),
 })
 
 export type ExperienceType = z.infer<typeof experienceSchema>

@@ -24,8 +24,8 @@ const (
 type GetFeedRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Limit         int32                  `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
-	Cursor        string                 `protobuf:"bytes,4,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	Cursor        string                 `protobuf:"bytes,3,opt,name=cursor,proto3" json:"cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -211,7 +211,8 @@ func (x *FeedItem) GetPost() *Post {
 
 type GetFeedResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Items         []*FeedItem            `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"` // common.PageInfo page_info = 2;
+	Items         []*FeedItem            `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	NextCursor    string                 `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -253,6 +254,13 @@ func (x *GetFeedResponse) GetItems() []*FeedItem {
 	return nil
 }
 
+func (x *GetFeedResponse) GetNextCursor() string {
+	if x != nil {
+		return x.NextCursor
+	}
+	return ""
+}
+
 var File_feed_feed_proto protoreflect.FileDescriptor
 
 const file_feed_feed_proto_rawDesc = "" +
@@ -260,8 +268,8 @@ const file_feed_feed_proto_rawDesc = "" +
 	"\x0ffeed/feed.proto\x12\x04feed\"W\n" +
 	"\x0eGetFeedRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x14\n" +
-	"\x05limit\x18\x03 \x01(\x05R\x05limit\x12\x16\n" +
-	"\x06cursor\x18\x04 \x01(\tR\x06cursor\"k\n" +
+	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x16\n" +
+	"\x06cursor\x18\x03 \x01(\tR\x06cursor\"k\n" +
 	"\x04Post\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tauthor_id\x18\x02 \x01(\tR\bauthorId\x12\x18\n" +
@@ -271,9 +279,11 @@ const file_feed_feed_proto_rawDesc = "" +
 	"\apost_id\x18\x01 \x01(\tR\x06postId\x12\x16\n" +
 	"\x06cursor\x18\x02 \x01(\tR\x06cursor\x12\x1e\n" +
 	"\x04post\x18\x03 \x01(\v2\n" +
-	".feed.PostR\x04post\"7\n" +
+	".feed.PostR\x04post\"X\n" +
 	"\x0fGetFeedResponse\x12$\n" +
-	"\x05items\x18\x01 \x03(\v2\x0e.feed.FeedItemR\x05items2E\n" +
+	"\x05items\x18\x01 \x03(\v2\x0e.feed.FeedItemR\x05items\x12\x1f\n" +
+	"\vnext_cursor\x18\x02 \x01(\tR\n" +
+	"nextCursor2E\n" +
 	"\vFeedService\x126\n" +
 	"\aGetFeed\x12\x14.feed.GetFeedRequest\x1a\x15.feed.GetFeedResponseB\x16Z\x14ouroboros/proto/feedb\x06proto3"
 

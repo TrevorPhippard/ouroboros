@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strings"
 
 	pb "ouroboros/proto/generated/auth"
 
@@ -22,16 +23,39 @@ type authServiceServer struct {
 	pb.UnimplementedAuthServiceServer
 }
 
+var seededUsers = map[string]*pb.User{
+	"user-1": {
+		Id:       "user-1",
+		Email:    "alice@example.com",
+		Username: "alice",
+	},
+	"user-2": {
+		Id:       "user-2",
+		Email:    "bob@example.com",
+		Username: "bob",
+	},
+	"user-3": {
+		Id:       "user-3",
+		Email:    "carol@example.com",
+		Username: "carol",
+	},
+}
+
 func (s *authServiceServer) SignIn(ctx context.Context, req *pb.SignInRequest) (*pb.AuthResponse, error) {
 	log.Printf("SignIn attempt: %s", req.Email)
 
-	return &pb.AuthResponse{
-		Token: "mock-jwt-token",
-		User: &pb.User{
-			Id:       "1",
+	user := lookupUserByEmail(req.Email)
+	if user == nil {
+		user = &pb.User{
+			Id:       "user-1",
 			Email:    req.Email,
 			Username: "mockuser",
-		},
+		}
+	}
+
+	return &pb.AuthResponse{
+		Token: "mock-jwt-token",
+		User:  user,
 	}, nil
 }
 
@@ -60,6 +84,10 @@ func (s *authServiceServer) SignOut(ctx context.Context, req *pb.SignOutRequest)
 func (s *authServiceServer) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.User, error) {
 	log.Printf("Auth Service: Fetching User ID: %s", req.Id)
 
+	if user, ok := seededUsers[req.Id]; ok {
+		return cloneUser(user), nil
+	}
+
 	return &pb.User{
 		Id:       req.Id,
 		Email:    fmt.Sprintf("user_%s@example.com", req.Id),
@@ -72,6 +100,10 @@ func (s *authServiceServer) GetUsersByIds(ctx context.Context, req *pb.GetUsersB
 
 	var users []*pb.User
 	for _, id := range req.Ids {
+		if user, ok := seededUsers[id]; ok {
+			users = append(users, cloneUser(user))
+			continue
+		}
 		users = append(users, &pb.User{
 			Id:       id,
 			Email:    fmt.Sprintf("user_%s@example.com", id),
@@ -80,6 +112,28 @@ func (s *authServiceServer) GetUsersByIds(ctx context.Context, req *pb.GetUsersB
 	}
 
 	return &pb.GetUsersByIdsResponse{Users: users}, nil
+}
+
+func lookupUserByEmail(email string) *pb.User {
+	email = strings.TrimSpace(strings.ToLower(email))
+	for _, user := range seededUsers {
+		if strings.EqualFold(user.Email, email) {
+			return cloneUser(user)
+		}
+	}
+	return nil
+}
+
+func cloneUser(user *pb.User) *pb.User {
+	if user == nil {
+		return nil
+	}
+	return &pb.User{
+		Id:          user.Id,
+		Email:       user.Email,
+		Username:    user.Username,
+		DisplayName: user.DisplayName,
+	}
 }
 
 func main() {

@@ -7,25 +7,19 @@ export const connectionSchema = z.object({
 export const edgeUserSchema = z.object({
   id: z.string(),
   name: z.string(),
-  headline: z.string(),
-  mutualConnections: z.number(),
+  username: z.string(),
+  headline: z.string().optional(),
+  avatarUrl: z.string().optional(),
 })
 
-export const recommendationSchema = z.object({
-  id: z.string().optional(),
-  edges: z.array(edgeUserSchema),
-})
+export const recommendationSchema = z.array(edgeUserSchema)
 
 export const userSchema = z.object({
-  id: z.string().optional(),
+  id: z.string(),
   name: z.string(),
-  headline: z.string(),
-  avatarUrl: z.string(),
-  coverUrl: z.string(),
-  about: z.string(),
-  followers: z.number(),
-  connections: z.string(),
-  location: z.string(),
+  username: z.string(),
+  headline: z.string().optional(),
+  avatarUrl: z.string().optional(),
 })
 
 export type Connection = z.infer<typeof connectionSchema>
