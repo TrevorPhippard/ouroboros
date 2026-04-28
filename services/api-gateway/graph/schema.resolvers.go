@@ -134,10 +134,22 @@ func (r *mutationResolver) CreateComment(ctx context.Context, input model.Create
 
 // LikePost is the resolver for the likePost field.
 func (r *mutationResolver) LikePost(ctx context.Context, postID string) (*model.Post, error) {
-	post, err := r.Post(ctx, postID)
+	res, err := r.PostClient.GetPost(ctx, &postpb.GetPostRequest{Id: postID})
 	if err != nil {
 		return nil, fmt.Errorf("failed to like post: %w", err)
 	}
+
+	post := &model.Post{
+		ID:        res.Id,
+		Content:   res.Content,
+		CreatedAt: res.CreatedAt,
+		AuthorID:  res.AuthorId,
+	}
+
+	if err := r.attachAuthorsToPosts(ctx, []*model.Post{post}); err != nil {
+		return nil, err
+	}
+
 	return post, nil
 }
 

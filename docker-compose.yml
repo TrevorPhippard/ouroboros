@@ -186,9 +186,12 @@ services:
     ports:
       - "50053:50053"
     depends_on:
-      - postgres
-      - prometheus
-      - consul
+      postgres:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+      consul:
+        condition: service_healthy
     networks:
       - mesh
 
