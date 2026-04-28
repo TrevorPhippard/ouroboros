@@ -4,6 +4,7 @@ services:
   # ==========================================
   # KAFKA (KRaft Mode - No Zookeeper)
   # ==========================================
+
   kafka:
     image: confluentinc/cp-kafka:7.8.0
     container_name: kafka
@@ -185,9 +186,12 @@ services:
     ports:
       - "50053:50053"
     depends_on:
-      - postgres
-      - prometheus
-      - consul
+      postgres:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+      consul:
+        condition: service_healthy
     networks:
       - mesh
 
@@ -223,27 +227,9 @@ services:
     container_name: ouroboros_feed
     environment:
       - KAFKA_BROKER=kafka:9092
+      - SEED_MOCK_FEED=true
     ports:
       - "50055:50055"
-    depends_on:
-      prometheus:
-        condition: service_healthy
-      consul:
-        condition: service_healthy
-    networks:
-      - mesh
-
-  notification-service:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICE_DIR: notification
-    container_name: ouroboros_notification
-    environment:
-      - KAFKA_BROKER=kafka:9092
-    ports:
-      - "50056:50056"
     depends_on:
       prometheus:
         condition: service_healthy
@@ -289,6 +275,24 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      prometheus:
+        condition: service_healthy
+      consul:
+        condition: service_healthy
+    networks:
+      - mesh
+  notification-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: notification
+    container_name: ouroboros_notification
+    environment:
+      - KAFKA_BROKER=kafka:9092
+    ports:
+      - "50056:50056"
+    depends_on:
       prometheus:
         condition: service_healthy
       consul:

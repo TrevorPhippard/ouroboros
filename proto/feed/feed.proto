@@ -11,8 +11,8 @@ service FeedService {
 
 message GetFeedRequest {
   string user_id = 1;
-  int32 limit = 3;
-  string cursor = 4;
+  int32 limit = 2;
+  string cursor = 3;
 }
 
 message Post {
@@ -30,5 +30,5 @@ message FeedItem {
 
 message GetFeedResponse {
   repeated FeedItem items = 1;
-  // common.PageInfo page_info = 2;
+  string next_cursor = 2;
 }

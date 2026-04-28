@@ -2,8 +2,7 @@
 
 import { useInfiniteQuery } from "@tanstack/react-query"
 import { useFeedQuery } from "../hooks/useFeed"
-import { PostCard } from "./PostCard" // Assume this is a standard UI component
-import { id } from "zod/v4/locales"
+import { PostCard } from "./PostCard"
 
 export const FeedList = () => {
   const queryOptions = useFeedQuery()
@@ -26,11 +25,10 @@ export const FeedList = () => {
   // Debug log to inspect the structure of 'data'
   return (
     <div className="space-y-4">
-      {" "}
       {data.pages.map((page, index) => (
         <div key={index} className="space-y-4">
-          {page.feed.items.map((post: { id: string }) => (
-            <PostCard key={post.id} post={post.post} />
+          {page.feed.items.map((post) => (
+            <PostCard key={post.id} post={post} />
           ))}
         </div>
       ))}

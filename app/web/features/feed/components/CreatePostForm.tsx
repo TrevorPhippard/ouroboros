@@ -6,6 +6,7 @@ import { z } from "zod"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { gqlRequest } from "@/services/graphql/client"
 import { CREATE_POST } from "@/lib/queries"
+import { useAuthStore } from "@/store/useAuthStore"
 
 const postSchema = z.object({
   content: z
@@ -17,6 +18,7 @@ const postSchema = z.object({
 type PostFormValues = z.infer<typeof postSchema>
 
 export const CreatePostForm = () => {
+  const userId = useAuthStore((state) => state.user?.id ?? "user-1")
   const queryClient = useQueryClient()
   const {
     register,
@@ -31,7 +33,12 @@ export const CreatePostForm = () => {
     mutationFn: (data: PostFormValues) =>
       gqlRequest({
         query: CREATE_POST,
-        variables: data,
+        variables: {
+          input: {
+            authorId: userId,
+            content: data.content,
+          },
+        },
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["feed"] })

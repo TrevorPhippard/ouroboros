@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net"
 	"net/http"
@@ -25,6 +26,9 @@ func main() {
 	database.SeedDB(db)
 
 	writer := messaging.NewPostProducer("kafka:9092", "posts.created")
+	if err := service.BootstrapFeedEvents(context.Background(), db, writer); err != nil {
+		log.Printf("failed to publish bootstrap feed events: %v", err)
+	}
 	discovery.Register("consul:8500", "post-service", 50057)
 
 	// 2. Start HTTP Server (Metrics + Health)

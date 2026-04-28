@@ -15,10 +15,11 @@ export const useSendConnectionRequest = () => {
     onMutate: async (userId) => {
       await queryClient.cancelQueries({ queryKey: ["recommendations"] })
       const previousData = queryClient.getQueryData(["recommendations"])
-      queryClient.setQueryData(["recommendations"], (old: Recommendation) => ({
-        ...old,
-        edges: old.edges.filter((user: EdgeUser) => user.id !== userId),
-      }))
+      queryClient.setQueryData(["recommendations"], (old: Recommendation) =>
+        Array.isArray(old)
+          ? old.filter((user: EdgeUser) => user.id !== userId)
+          : old
+      )
 
       return { previousData }
     },

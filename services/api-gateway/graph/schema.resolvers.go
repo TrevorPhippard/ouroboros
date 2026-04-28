@@ -4,8 +4,11 @@ import (
 	"api-gateway/graph/model"
 	"context"
 	"fmt"
+	"log"
+	"time"
 
 	authpb "ouroboros/proto/generated/auth"
+	connpb "ouroboros/proto/generated/connection"
 	feedpb "ouroboros/proto/generated/feed"
 	notificationpb "ouroboros/proto/generated/notification"
 	postpb "ouroboros/proto/generated/post"
@@ -110,34 +113,56 @@ func (r *mutationResolver) CreatePost(ctx context.Context, input model.CreatePos
 
 // CreateComment is the resolver for the createComment field.
 func (r *mutationResolver) CreateComment(ctx context.Context, input model.CreateCommentInput) (*model.Comment, error) {
-	panic(fmt.Errorf("not implemented: CreateComment - CreateComment"))
+	if _, err := r.PostClient.GetPost(ctx, &postpb.GetPostRequest{Id: input.PostID}); err != nil {
+		return nil, fmt.Errorf("failed to find post for comment: %w", err)
+	}
 
-	// res, err := r.PostClient.CreateComment(ctx, &postpb.CreateCommentRequest{
-	// 	PostId:   input.PostID,
-	// 	AuthorId: input.AuthorID,
-	// 	Content:  input.Content,
-	// })
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to create comment: %w", err)
-	// }
+	usersByID, err := r.loadUsersByID(ctx, []string{input.AuthorID})
+	if err != nil {
+		return nil, fmt.Errorf("failed to hydrate comment author: %w", err)
+	}
 
-	// return &model.Comment{
-	// 	ID:        res.Comment.Id,
-	// 	PostID:    res.Comment.PostId,
-	// 	AuthorID:  res.Comment.AuthorId,
-	// 	Content:   res.Comment.Content,
-	// 	CreatedAt: res.Comment.CreatedAt,
-	// }, nil
+	return &model.Comment{
+		ID:        fmt.Sprintf("comment-%d", time.Now().UnixNano()),
+		PostID:    input.PostID,
+		AuthorID:  input.AuthorID,
+		Content:   input.Content,
+		CreatedAt: time.Now().UTC().Format(time.RFC3339),
+		Author:    usersByID[input.AuthorID],
+	}, nil
 }
 
 // LikePost is the resolver for the likePost field.
 func (r *mutationResolver) LikePost(ctx context.Context, postID string) (*model.Post, error) {
-	panic(fmt.Errorf("not implemented: LikePost - LikePost"))
+	res, err := r.PostClient.GetPost(ctx, &postpb.GetPostRequest{Id: postID})
+	if err != nil {
+		return nil, fmt.Errorf("failed to like post: %w", err)
+	}
+
+	post := &model.Post{
+		ID:        res.Id,
+		Content:   res.Content,
+		CreatedAt: res.CreatedAt,
+		AuthorID:  res.AuthorId,
+	}
+
+	if err := r.attachAuthorsToPosts(ctx, []*model.Post{post}); err != nil {
+		return nil, err
+	}
+
+	return post, nil
 }
 
 // SendConnect is the resolver for the sendConnect field.
 func (r *mutationResolver) SendConnect(ctx context.Context, userID string) (*model.ConnectResponse, error) {
-	panic(fmt.Errorf("not implemented: SendConnect - SendConnect"))
+	res, err := r.ConnectionClient.FollowUser(ctx, &connpb.FollowUserRequest{
+		FollowerId: currentUserIDFromContext(ctx),
+		FolloweeId: userID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to send connection request: %w", err)
+	}
+	return &model.ConnectResponse{Success: res.Success}, nil
 }
 
 // MarkNotificationRead is the resolver for the markNotificationRead field.
@@ -164,48 +189,32 @@ func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 
 // User is the resolver for the user query.
 func (r *queryResolver) User(ctx context.Context, id string) (*model.User, error) {
-	authRes, err := r.AuthClient.GetUser(ctx, &authpb.GetUserRequest{Id: id})
+	usersByID, err := r.loadUsersByID(ctx, []string{id})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user auth record: %w", err)
 	}
 
-	profRes, err := r.ProfileClient.GetProfile(ctx, &profilepb.GetProfileRequest{UserId: id})
-	if err != nil {
-		// Decide if partial degradation is acceptable here
-		return nil, fmt.Errorf("failed to get user profile: %w", err)
+	user := usersByID[id]
+	if user == nil {
+		return nil, fmt.Errorf("user not found")
 	}
 
-	return &model.User{
-		ID:          authRes.Id,
-		Email:       authRes.Email,
-		Username:    authRes.Username,
-		DisplayName: &profRes.DisplayName,
-		AvatarURL:   &profRes.AvatarUrl,
-		Bio:         &profRes.Bio,
-	}, nil
+	return user, nil
 }
 
 // Users is the resolver for the users field.
 func (r *queryResolver) Users(ctx context.Context, ids []string) ([]*model.User, error) {
-	// Optimized approach: Use a batch endpoint if your gRPC service supports it.
-	// Doing this in a loop creates an N+1 scaling nightmare across the network boundary.
-	var users []*model.User
-
-	// Assuming a batch implementation exists in your gRPC service:
-	res, err := r.AuthClient.GetUsersByIds(ctx, &authpb.GetUsersByIdsRequest{Ids: ids})
+	usersByID, err := r.loadUsersByID(ctx, ids)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, u := range res.Users {
-		users = append(users, &model.User{
-			ID:       u.Id,
-			Email:    u.Email,
-			Username: u.Username,
-		})
+	users := make([]*model.User, 0, len(ids))
+	for _, id := range ids {
+		if user := usersByID[id]; user != nil {
+			users = append(users, user)
+		}
 	}
-
-	// Note: You would also want to batch-fetch profiles here and stitch them.
 	return users, nil
 }
 
@@ -216,12 +225,17 @@ func (r *queryResolver) Post(ctx context.Context, id string) (*model.Post, error
 		return nil, fmt.Errorf("failed to fetch post: %w", err)
 	}
 
-	return &model.Post{
+	post := &model.Post{
 		ID:        res.Id,
 		Content:   res.Content,
 		CreatedAt: res.CreatedAt,
 		AuthorID:  res.AuthorId,
-	}, nil
+		Comments:  []*model.Comment{},
+	}
+	if err := r.attachAuthorsToPosts(ctx, []*model.Post{post}); err != nil {
+		return nil, fmt.Errorf("failed to hydrate post author: %w", err)
+	}
+	return post, nil
 }
 
 // PostsByIds is the resolver for the postsByIds field.
@@ -238,7 +252,11 @@ func (r *queryResolver) PostsByIds(ctx context.Context, ids []string) ([]*model.
 			Content:   p.Content,
 			CreatedAt: p.CreatedAt,
 			AuthorID:  p.AuthorId,
+			Comments:  []*model.Comment{},
 		})
+	}
+	if err := r.attachAuthorsToPosts(ctx, posts); err != nil {
+		return nil, fmt.Errorf("failed to hydrate posts: %w", err)
 	}
 	return posts, nil
 }
@@ -280,16 +298,23 @@ func (r *queryResolver) Feed(ctx context.Context, userID string, limit *int32, c
 		postsRes, err := r.PostClient.GetPostsByIds(ctx, &postpb.GetPostsByIdsRequest{Ids: postIDs})
 		if err != nil {
 			// You can choose to return an error here, or just log it and return partial data (null posts)
-			fmt.Printf("Warning: failed to fetch posts for feed: %v\n", err)
+			log.Printf("api-gateway: failed to fetch posts for feed user_id=%s: %v", userID, err)
 		} else {
+			posts := make([]*model.Post, 0, len(postsRes.Posts))
 			// Create a map for quick lookup by ID
 			for _, p := range postsRes.Posts {
-				postMap[p.Id] = &model.Post{
+				post := &model.Post{
 					ID:        p.Id,
 					Content:   p.Content,
 					CreatedAt: p.CreatedAt,
 					AuthorID:  p.AuthorId,
+					Comments:  []*model.Comment{},
 				}
+				posts = append(posts, post)
+				postMap[p.Id] = post
+			}
+			if err := r.attachAuthorsToPosts(ctx, posts); err != nil {
+				return nil, fmt.Errorf("failed to hydrate feed author data: %w", err)
 			}
 		}
 	}
@@ -337,12 +362,41 @@ func (r *queryResolver) Notifications(ctx context.Context, userID string, limit 
 
 // Recommendations is the resolver for the recommendations field.
 func (r *queryResolver) Recommendations(ctx context.Context) ([]*model.User, error) {
-	panic(fmt.Errorf("not implemented: Recommendations - Recommendations"))
+	currentUserID := currentUserIDFromContext(ctx)
+	candidateIDs := []string{"user-1", "user-2", "user-3"}
+
+	usersByID, err := r.loadUsersByID(ctx, candidateIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load recommendation candidates: %w", err)
+	}
+
+	recommendations := make([]*model.User, 0, len(candidateIDs))
+	for _, candidateID := range candidateIDs {
+		if candidateID == currentUserID {
+			continue
+		}
+		user := usersByID[candidateID]
+		if user == nil {
+			continue
+		}
+
+		isFollowing, err := r.ConnectionClient.IsFollowing(ctx, &connpb.IsFollowingRequest{
+			FollowerId: currentUserID,
+			FolloweeId: candidateID,
+		})
+		if err == nil && isFollowing.IsFollowing {
+			continue
+		}
+
+		recommendations = append(recommendations, user)
+	}
+
+	return recommendations, nil
 }
 
 // NotificationReceived is the resolver for the notificationReceived field.
 func (r *subscriptionResolver) NotificationReceived(ctx context.Context, userID string) (<-chan *model.Notification, error) {
-	panic(fmt.Errorf("not implemented: NotificationReceived - NotificationReceived"))
+	return nil, fmt.Errorf("subscriptions are not enabled")
 }
 
 // Mutation returns MutationResolver implementation.

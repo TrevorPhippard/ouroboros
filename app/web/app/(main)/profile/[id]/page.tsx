@@ -22,7 +22,7 @@ export default async function UserProfilePage({ params }: Props) {
     queryFn: () =>
       gqlRequest({
         query: GET_PROFILE,
-        variables: { id: userId },
+        variables: { userId },
       }),
   })
 

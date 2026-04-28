@@ -20,10 +20,10 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: {
-        id: "u1",
-        email: "test@example.com",
-        name: "Test User",
-        avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=testuser",
+        id: "user-1",
+        email: "alice@example.com",
+        name: "Alice Johnson",
+        avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=user-1",
       },
       token: null,
       isAuthenticated: false,
