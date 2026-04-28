@@ -117,8 +117,9 @@ export const SIGN_IN = gql`
       token
       user {
         id
-        displayName
         email
+        username
+        displayName
       }
     }
   }

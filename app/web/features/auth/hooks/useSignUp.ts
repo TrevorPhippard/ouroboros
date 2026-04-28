@@ -1,27 +1,38 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { SignUpValues } from "@/features/auth/schemas"
+import { gqlRequest } from "@/services/graphql/client"
+import { SIGN_UP } from "@/lib/queries"
+import { useRouter } from "next/navigation"
 
 type SignUpResponse = {
-  user: { id: string; email: string }
+  signUp: {
+    id: string
+    displayName: string
+    email: string
+  }
 }
 
 export function useSignUp() {
   const queryClient = useQueryClient()
+  const router = useRouter()
 
   return useMutation<SignUpResponse, Error, SignUpValues>({
     mutationFn: async (data: SignUpValues) => {
-      const { confirmPassword, ...apiPayload } = data
-      const response = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(apiPayload),
+      const { confirmPassword: _confirmPassword, name, ...rest } = data
+      return gqlRequest({
+        query: SIGN_UP,
+        variables: {
+          input: {
+            ...rest,
+            displayName: name,
+          },
+        },
       })
-      if (!response.ok) throw new Error("Failed to create account.")
-      return response.json()
     },
     retry: false,
     onSuccess: (data) => {
       queryClient.setQueryData(["user-session"], data)
+      router.push("/login")
     },
   })
 }

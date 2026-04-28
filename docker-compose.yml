@@ -182,6 +182,7 @@ services:
         SERVICE_DIR: auth
     container_name: ouroboros_auth
     environment:
+      - DB_URL=postgres://admin:password@postgres:5432/ouroboros?sslmode=disable
       - KAFKA_BROKER=kafka:9092
     ports:
       - "50053:50053"

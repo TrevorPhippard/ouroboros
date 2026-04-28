@@ -1,16 +1,15 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net"
 	"net/http"
 	"os"
-	"time"
+	"os/signal"
+	"syscall"
 
 	pb "ouroboros/proto/generated/profile"
-
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 
 	"profile/internal/database"
 	"profile/internal/discovery"
@@ -22,25 +21,10 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-func connectDB(dbURL string) *gorm.DB {
-	var db *gorm.DB
-	var err error
-
-	for i := 0; i < 10; i++ {
-		db, err = gorm.Open(postgres.Open(dbURL), &gorm.Config{})
-		if err == nil {
-			return db
-		}
-
-		log.Println("Waiting for DB...")
-		time.Sleep(2 * time.Second)
-	}
-
-	log.Fatal("Failed to connect to DB:", err)
-	return nil
-}
-
 func main() {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	// 1. Setup Infrastructure
 	dbURL := os.Getenv("DB_URL")
 	db := database.Connect(dbURL)
@@ -75,6 +59,8 @@ func main() {
 	profileService := &service.ProfileServiceServer{DB: db, Writer: writer}
 	pb.RegisterProfileServiceServer(s, profileService)
 	reflection.Register(s)
+
+	go messaging.RunUserSignedUpConsumer(ctx, profileService)
 
 	log.Println("Profile Service (gRPC) running on :50058")
 	if err := s.Serve(lis); err != nil {

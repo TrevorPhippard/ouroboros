@@ -26,6 +26,9 @@ message UpdateProfileRequest {
   string user_id = 1;
   string headline = 2;
   string about = 3;
+  string display_name = 4;
+  string avatar_url = 5;
+  string bio = 6;
 }
 
 message UpdateProfileResponse {

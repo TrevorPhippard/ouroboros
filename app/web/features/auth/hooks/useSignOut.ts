@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useAuthStore } from "@/store/useAuthStore"
+import { gqlRequest } from "@/services/graphql/client"
+import { SIGN_OUT } from "@/lib/queries"
 
 export function useSignOut() {
   const queryClient = useQueryClient()
@@ -7,9 +9,7 @@ export function useSignOut() {
 
   return useMutation({
     mutationFn: async () => {
-      const response = await fetch("/api/auth/signout", { method: "POST" })
-      if (!response.ok) throw new Error("Failed to sign out.")
-      return response.json()
+      return gqlRequest({ query: SIGN_OUT })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["user-session"] })

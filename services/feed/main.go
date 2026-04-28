@@ -3,15 +3,14 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -28,6 +27,48 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// --------------------
+// Config
+// --------------------
+
+const (
+	feedMaxSize     = 1000
+	defaultPageSize = 20
+	grpcPort        = ":50055"
+	httpPort        = ":8080"
+	redisAddr       = "redis:6379"
+	kafkaAddr       = "kafka:9092"
+
+	batchSize       = 100
+	maxConcurrency  = 8  // per job
+	globalWorkers   = 16 // global worker pool
+	globalQueueSize = 1000
+	rateLimitEvery  = 2 * time.Millisecond // ~500 ops/sec
+)
+
+// --------------------
+// Global Backpressure + Rate Limiting
+// --------------------
+
+var (
+	fanoutQueue = make(chan func(), globalQueueSize)
+	rateLimiter = time.Tick(rateLimitEvery)
+)
+
+func startGlobalWorkers() {
+	for i := 0; i < globalWorkers; i++ {
+		go func() {
+			for job := range fanoutQueue {
+				job()
+			}
+		}()
+	}
+}
+
+// --------------------
+// Interceptors
+// --------------------
+
 func loggingUnaryInterceptor(
 	ctx context.Context,
 	req any,
@@ -36,43 +77,24 @@ func loggingUnaryInterceptor(
 ) (any, error) {
 
 	start := time.Now()
-
 	p, _ := peer.FromContext(ctx)
 
-	log.Printf("[gRPC START] method=%s peer=%v req=%+v",
-		info.FullMethod,
-		p.Addr,
-		req,
-	)
+	log.Printf("[gRPC START] method=%s peer=%v", info.FullMethod, p.Addr)
 
 	resp, err := handler(ctx, req)
 
 	duration := time.Since(start)
-
 	st, _ := status.FromError(err)
 
 	log.Printf("[gRPC END] method=%s duration=%s status=%s err=%v",
-		info.FullMethod,
-		duration,
-		st.Code(),
-		err,
+		info.FullMethod, duration, st.Code(), err,
 	)
 
 	return resp, err
 }
 
-// Config constants
-const (
-	feedMaxSize     = 1000
-	defaultPageSize = 20
-	grpcPort        = ":50055"
-	httpPort        = ":8080"
-	redisAddr       = "redis:6379"
-	kafkaAddr       = "kafka:9092"
-)
-
 // --------------------
-// Models & Events
+// Models
 // --------------------
 
 type PostCreatedEvent struct {
@@ -85,6 +107,17 @@ type PostCreatedEvent struct {
 	} `json:"data"`
 }
 
+type FanoutJob struct {
+	EventID   string   `json:"event_id"`
+	PostID    string   `json:"post_id"`
+	AuthorID  string   `json:"author_id"`
+	Followers []string `json:"followers"`
+
+	BatchSize int          `json:"batch_size"`
+	Completed map[int]bool `json:"completed"`
+	Cursor    int          `json:"cursor"`
+}
+
 // --------------------
 // Storage Layer
 // --------------------
@@ -94,46 +127,96 @@ type FeedStore struct {
 }
 
 func NewFeedStore(addr string) *FeedStore {
-	return &FeedStore{rdb: redis.NewClient(&redis.Options{Addr: addr})}
+	return &FeedStore{
+		rdb: redis.NewClient(&redis.Options{
+			Addr:         addr,
+			PoolSize:     50,
+			MinIdleConns: 10,
+		}),
+	}
 }
 
-func (s *FeedStore) AddToFeed(ctx context.Context, userID string, item *pbFeed.FeedItem) error {
-	data, _ := json.Marshal(item)
-	key := fmt.Sprintf("feed:%s", userID)
-
-	pipe := s.rdb.TxPipeline()
-	pipe.LPush(ctx, key, data)
-	pipe.LTrim(ctx, key, 0, feedMaxSize-1)
-	_, err := pipe.Exec(ctx)
-	return err
+func feedKey(userID string) string {
+	return fmt.Sprintf("feed:%s", userID)
 }
 
-func (s *FeedStore) SeedFeedIfEmpty(ctx context.Context, userID string, items []*pbFeed.FeedItem) error {
-	key := fmt.Sprintf("feed:%s", userID)
+func jobKey(eventID string) string {
+	return "fanout:job:" + eventID
+}
 
-	length, err := s.rdb.LLen(ctx, key).Result()
+func parseTimestamp(ts string) (float64, error) {
+	t, err := time.Parse(time.RFC3339, ts)
+	if err != nil {
+		return 0, err
+	}
+	return float64(t.UnixNano()), nil
+}
+
+// --------------------
+// Redis Operations
+// --------------------
+
+func (s *FeedStore) FanoutBatch(
+	ctx context.Context,
+	userIDs []string,
+	item *pbFeed.FeedItem,
+) error {
+
+	score, err := parseTimestamp(item.Post.Timestamp)
 	if err != nil {
 		return err
 	}
-	if length > 0 {
-		return nil
-	}
 
-	pipe := s.rdb.TxPipeline()
-	for i := len(items) - 1; i >= 0; i-- {
-		data, err := json.Marshal(items[i])
-		if err != nil {
-			return err
-		}
-		pipe.LPush(ctx, key, data)
+	pipe := s.rdb.Pipeline()
+
+	for _, userID := range userIDs {
+		key := feedKey(userID)
+
+		pipe.ZAdd(ctx, key, &redis.Z{
+			Score:  score,
+			Member: item.PostId, // ✅ idempotent
+		})
+
+		pipe.ZRemRangeByRank(ctx, key, 0, -(feedMaxSize + 1))
 	}
-	pipe.LTrim(ctx, key, 0, feedMaxSize-1)
 
 	_, err = pipe.Exec(ctx)
 	return err
 }
 
-func (s *FeedStore) GetFeed(ctx context.Context, userID string, cursor string, limit int64) ([]*pbFeed.FeedItem, string, error) {
+func (s *FeedStore) SaveJob(ctx context.Context, job *FanoutJob) error {
+	data, _ := json.Marshal(job)
+	return s.rdb.Set(ctx, jobKey(job.EventID), data, 24*time.Hour).Err()
+}
+
+func (s *FeedStore) LoadJob(ctx context.Context, eventID string) (*FanoutJob, error) {
+	data, err := s.rdb.Get(ctx, jobKey(eventID)).Bytes()
+	if err != nil {
+		if err == redis.Nil {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	var job FanoutJob
+	if err := json.Unmarshal(data, &job); err != nil {
+		return nil, err
+	}
+
+	return &job, nil
+}
+
+// --------------------
+// Read Path
+// --------------------
+
+func (s *FeedStore) GetFeed(
+	ctx context.Context,
+	userID string,
+	cursor string,
+	limit int64,
+) ([]*pbFeed.FeedItem, string, error) {
+
 	if limit <= 0 {
 		limit = defaultPageSize
 	}
@@ -141,48 +224,55 @@ func (s *FeedStore) GetFeed(ctx context.Context, userID string, cursor string, l
 		limit = 100
 	}
 
-	var start int64
+	key := feedKey(userID)
+
+	maxScore := "+inf"
 	if cursor != "" {
-		parsed, err := strconv.ParseInt(cursor, 10, 64)
-		if err != nil || parsed < 0 {
-			return nil, "", status.Error(codes.InvalidArgument, "cursor must be a non-negative integer")
-		}
-		start = parsed
+		maxScore = cursor
 	}
 
-	end := start + limit - 1
+	// 1. FIXED: Use WithScores to get the actual timestamp data alongside the PostID
+	results, err := s.rdb.ZRevRangeByScoreWithScores(ctx, key, &redis.ZRangeBy{
+		Max:   maxScore,
+		Min:   "-inf",
+		Count: limit,
+	}).Result()
 
-	results, err := s.rdb.LRange(ctx, fmt.Sprintf("feed:%s", userID), start, end).Result()
 	if err != nil {
 		return nil, "", err
 	}
 
 	items := make([]*pbFeed.FeedItem, 0, len(results))
+
+	var lastScore float64
+
 	for _, r := range results {
-		var item pbFeed.FeedItem
-		if err := json.Unmarshal([]byte(r), &item); err != nil {
-			log.Printf("feed-service: skipping malformed feed entry user_id=%s: %v", userID, err)
-			continue
+		// 2. FIXED: Type assert the member to a string safely
+		postID, ok := r.Member.(string)
+		if !ok {
+			continue // Handle unexpected data types gracefully
 		}
-		items = append(items, &item)
+
+		items = append(items, &pbFeed.FeedItem{
+			PostId: postID,
+		})
+
+		// 3. FIXED: Capture the actual score of the item from Redis
+		lastScore = r.Score
 	}
 
 	nextCursor := ""
-	if len(results) == int(limit) {
-		nextCursor = strconv.FormatInt(end+1, 10)
+	if len(items) == int(limit) {
+		// 4. FIXED: Use "%.0f" to prevent large UnixNano floats from
+		// degrading into scientific notation (e.g., 1.682e+18), which Redis rejects.
+		nextCursor = fmt.Sprintf("%.0f", lastScore-1)
 	}
+
 	return items, nextCursor, nil
 }
 
-func (s *FeedStore) CheckAndMarkProcessed(ctx context.Context, eventID string) (bool, error) {
-	key := fmt.Sprintf("processed:%s", eventID)
-	// Use SetNX for atomic check-and-set idempotency
-	ok, err := s.rdb.SetNX(ctx, key, "1", 24*time.Hour).Result()
-	return ok, err
-}
-
 // --------------------
-// Service Layer (Core Logic)
+// Service Layer
 // --------------------
 
 type FeedService struct {
@@ -191,39 +281,84 @@ type FeedService struct {
 	social *SocialGraph
 }
 
-func (s *FeedService) GetFeed(ctx context.Context, req *pbFeed.GetFeedRequest) (*pbFeed.GetFeedResponse, error) {
-	if req == nil {
-		return nil, status.Error(codes.InvalidArgument, "request is required")
-	}
-	if strings.TrimSpace(req.UserId) == "" {
-		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+// --------------------
+// Parallel Fanout Engine
+// --------------------
+
+func (s *FeedService) ProcessFanoutParallel(
+	ctx context.Context,
+	job *FanoutJob,
+	item *pbFeed.FeedItem,
+) error {
+
+	totalBatches := (len(job.Followers) + job.BatchSize - 1) / job.BatchSize
+
+	sem := make(chan struct{}, maxConcurrency)
+	errCh := make(chan error, totalBatches)
+
+	var mu sync.Mutex
+
+	for batchIdx := 0; batchIdx < totalBatches; batchIdx++ {
+
+		if job.Completed[batchIdx] {
+			continue
+		}
+
+		sem <- struct{}{}
+
+		start := batchIdx * job.BatchSize
+		end := start + job.BatchSize
+		if end > len(job.Followers) {
+			end = len(job.Followers)
+		}
+
+		batch := job.Followers[start:end]
+
+		fanoutQueue <- func() {
+
+			defer func() { <-sem }()
+
+			<-rateLimiter
+
+			err := s.store.FanoutBatch(ctx, batch, item)
+			if err != nil {
+				errCh <- err
+				return
+			}
+
+			mu.Lock()
+			job.Completed[batchIdx] = true
+
+			for job.Completed[job.Cursor] {
+				job.Cursor++
+			}
+
+			_ = s.store.SaveJob(ctx, job)
+			mu.Unlock()
+		}
 	}
 
-	items, next, err := s.store.GetFeed(ctx, req.UserId, req.Cursor, int64(req.Limit))
-	if err != nil {
-		log.Printf("feed-service: failed to fetch feed user_id=%s: %v", req.UserId, err)
-		return nil, err
-	}
-	return &pbFeed.GetFeedResponse{Items: items, NextCursor: next}, nil
-}
-
-// HandlePostCreated performs the "Fan-out on Write" logic
-func (s *FeedService) HandlePostCreated(ctx context.Context, event PostCreatedEvent) error {
-	if strings.TrimSpace(event.EventID) == "" {
-		return status.Error(codes.InvalidArgument, "event_id is required")
-	}
-	if strings.TrimSpace(event.Data.PostID) == "" || strings.TrimSpace(event.Data.AuthorID) == "" {
-		return status.Error(codes.InvalidArgument, "post event must include post_id and author_id")
+	// wait for all
+	for i := 0; i < cap(sem); i++ {
+		sem <- struct{}{}
 	}
 
-	// Idempotency check
-	isNew, err := s.store.CheckAndMarkProcessed(ctx, event.EventID)
-	if err != nil || !isNew {
+	close(errCh)
+
+	for err := range errCh {
 		if err != nil {
 			return err
 		}
-		return nil
 	}
+
+	return nil
+}
+
+// --------------------
+// Event Handler
+// --------------------
+
+func (s *FeedService) HandlePostCreated(ctx context.Context, event PostCreatedEvent) error {
 
 	item := &pbFeed.FeedItem{
 		PostId: event.Data.PostID,
@@ -236,143 +371,132 @@ func (s *FeedService) HandlePostCreated(ctx context.Context, event PostCreatedEv
 		},
 	}
 
-	followers, err := s.social.GetFollowers(ctx, event.Data.AuthorID)
+	job, err := s.store.LoadJob(ctx, event.EventID)
 	if err != nil {
 		return err
 	}
 
-	for _, userID := range followers {
-		if err := s.store.AddToFeed(ctx, userID, item); err != nil {
-			log.Printf("failed to update feed for user %s: %v", userID, err)
+	if job == nil {
+		followers, err := s.social.GetFollowers(ctx, event.Data.AuthorID)
+		if err != nil {
+			return err
+		}
+
+		job = &FanoutJob{
+			EventID:   event.EventID,
+			PostID:    event.Data.PostID,
+			AuthorID:  event.Data.AuthorID,
+			Followers: followers,
+			BatchSize: batchSize,
+			Completed: make(map[int]bool),
+			Cursor:    0,
 		}
 	}
-	return nil
+
+	return s.ProcessFanoutParallel(ctx, job, item)
 }
 
 // --------------------
-// Infrastructure / Transport
+// gRPC
+// --------------------
+
+func (s *FeedService) GetFeed(ctx context.Context, req *pbFeed.GetFeedRequest) (*pbFeed.GetFeedResponse, error) {
+	if req == nil || strings.TrimSpace(req.UserId) == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+
+	items, next, err := s.store.GetFeed(ctx, req.UserId, req.Cursor, int64(req.Limit))
+	if err != nil {
+		return nil, err
+	}
+
+	return &pbFeed.GetFeedResponse{
+		Items:      items,
+		NextCursor: next,
+	}, nil
+}
+
+// --------------------
+// Infra
 // --------------------
 
 type SocialGraph struct{}
 
 func (g *SocialGraph) GetFollowers(ctx context.Context, userID string) ([]string, error) {
-	if strings.TrimSpace(userID) == "" {
-		return nil, status.Error(codes.InvalidArgument, "user_id is required")
-	}
 	return []string{"user-1", "user-2", "user-3", userID}, nil
 }
 
+// --------------------
+// Kafka Consumer (SAFE)
+// --------------------
+
 func runKafkaConsumer(ctx context.Context, svc *FeedService) {
 	reader := kafka.NewReader(kafka.ReaderConfig{
-		Brokers: []string{kafkaAddr},
-		Topic:   "posts.created",
-		GroupID: "feed-service",
+		Brokers:        []string{kafkaAddr},
+		Topic:          "posts.created",
+		GroupID:        "feed-service",
+		CommitInterval: 0,
 	})
 	defer reader.Close()
 
-	log.Println("Kafka Consumer started...")
 	for {
-		msg, err := reader.ReadMessage(ctx)
+		msg, err := reader.FetchMessage(ctx)
 		if err != nil {
 			if ctx.Err() != nil {
 				return
-			} // Normal shutdown
-			log.Printf("Kafka error: %v", err)
+			}
 			continue
 		}
 
 		var event PostCreatedEvent
 		if err := json.Unmarshal(msg.Value, &event); err != nil {
-			log.Printf("feed-service: failed to decode post-created event: %v", err)
 			continue
 		}
 
-		if err := svc.HandlePostCreated(ctx, event); err != nil {
-			if errors.Is(err, context.Canceled) {
-				return
-			}
-			log.Printf("feed-service: worker error: %v", err)
+		err = svc.HandlePostCreated(ctx, event)
+		if err != nil {
+			log.Println("fanout failed:", err)
+			continue // no commit
 		}
-	}
-}
 
-func seedMockFeed(ctx context.Context, store *FeedStore) error {
-	items := []*pbFeed.FeedItem{
-		{
-			PostId: "post-3",
-			Cursor: "0",
-			Post: &pbFeed.Post{
-				Id:        "post-3",
-				AuthorId:  "user-3",
-				Content:   "Observability before optimization still wins most weeks.",
-				Timestamp: "2026-04-27T09:10:00Z",
-			},
-		},
-		{
-			PostId: "post-2",
-			Cursor: "1",
-			Post: &pbFeed.Post{
-				Id:        "post-2",
-				AuthorId:  "user-2",
-				Content:   "GraphQL is a lot nicer when the joins are explicit and cheap.",
-				Timestamp: "2026-04-27T09:05:00Z",
-			},
-		},
-		{
-			PostId: "post-1",
-			Cursor: "2",
-			Post: &pbFeed.Post{
-				Id:        "post-1",
-				AuthorId:  "user-1",
-				Content:   "Shipping the first cut of the feed service today.",
-				Timestamp: "2026-04-27T09:00:00Z",
-			},
-		},
+		_ = reader.CommitMessages(ctx, msg)
 	}
-
-	if err := store.SeedFeedIfEmpty(ctx, "user-1", items); err != nil {
-		return err
-	}
-
-	log.Println("feed-service: ensured mock Redis feed for user-1")
-	return nil
 }
 
 // --------------------
-// Main Execution
+// Main
 // --------------------
 
 func main() {
-	// turn OS signals into context cancellation
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	// Initialize Dependencies
+	startGlobalWorkers()
+
 	store := NewFeedStore(redisAddr)
-	if strings.EqualFold(os.Getenv("SEED_MOCK_FEED"), "true") {
-		if err := seedMockFeed(ctx, store); err != nil {
-			log.Printf("feed-service: failed to seed mock feed: %v", err)
-		}
-	}
+
 	service := &FeedService{
 		store:  store,
 		social: &SocialGraph{},
 	}
 
-	// 1. Start HTTP (Metrics/Health)
+	// HTTP
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("OK")) })
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("OK"))
+	})
+
 	httpSrv := &http.Server{Addr: httpPort, Handler: mux}
 	go httpSrv.ListenAndServe()
 
-	// 2. Start Kafka Consumer
+	// Kafka
 	go runKafkaConsumer(ctx, service)
 
-	// 3. Start gRPC Server
+	// gRPC
 	lis, err := net.Listen("tcp", grpcPort)
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		log.Fatal(err)
 	}
 
 	grpcSrv := grpc.NewServer(
@@ -383,19 +507,10 @@ func main() {
 	reflection.Register(grpcSrv)
 	discovery.Register("consul:8500", "feed-service", 50055)
 
-	go func() {
-		log.Printf("gRPC Server on %s", grpcPort)
-		if err := grpcSrv.Serve(lis); err != nil {
-			log.Printf("gRPC server failed: %v", err)
-		}
-	}()
+	go grpcSrv.Serve(lis)
 
-	// Wait for Shutdown Signal
 	<-ctx.Done()
-	log.Println("Shutting down gracefully...")
 
-	// Cleanup
 	grpcSrv.GracefulStop()
 	httpSrv.Shutdown(context.Background())
-	log.Println("Service stopped.")
 }

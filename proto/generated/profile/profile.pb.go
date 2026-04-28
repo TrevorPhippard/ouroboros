@@ -158,6 +158,9 @@ type UpdateProfileRequest struct {
 	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	Headline      string                 `protobuf:"bytes,2,opt,name=headline,proto3" json:"headline,omitempty"`
 	About         string                 `protobuf:"bytes,3,opt,name=about,proto3" json:"about,omitempty"`
+	DisplayName   string                 `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	AvatarUrl     string                 `protobuf:"bytes,5,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	Bio           string                 `protobuf:"bytes,6,opt,name=bio,proto3" json:"bio,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -209,6 +212,27 @@ func (x *UpdateProfileRequest) GetHeadline() string {
 func (x *UpdateProfileRequest) GetAbout() string {
 	if x != nil {
 		return x.About
+	}
+	return ""
+}
+
+func (x *UpdateProfileRequest) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *UpdateProfileRequest) GetAvatarUrl() string {
+	if x != nil {
+		return x.AvatarUrl
+	}
+	return ""
+}
+
+func (x *UpdateProfileRequest) GetBio() string {
+	if x != nil {
+		return x.Bio
 	}
 	return ""
 }
@@ -452,11 +476,15 @@ const file_profile_profile_proto_rawDesc = "" +
 	"\x1bGetProfilesByUserIdsRequest\x12\x19\n" +
 	"\buser_ids\x18\x01 \x03(\tR\auserIds\"L\n" +
 	"\x1cGetProfilesByUserIdsResponse\x12,\n" +
-	"\bprofiles\x18\x01 \x03(\v2\x10.profile.ProfileR\bprofiles\"a\n" +
+	"\bprofiles\x18\x01 \x03(\v2\x10.profile.ProfileR\bprofiles\"\xb5\x01\n" +
 	"\x14UpdateProfileRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1a\n" +
 	"\bheadline\x18\x02 \x01(\tR\bheadline\x12\x14\n" +
-	"\x05about\x18\x03 \x01(\tR\x05about\"C\n" +
+	"\x05about\x18\x03 \x01(\tR\x05about\x12!\n" +
+	"\fdisplay_name\x18\x04 \x01(\tR\vdisplayName\x12\x1d\n" +
+	"\n" +
+	"avatar_url\x18\x05 \x01(\tR\tavatarUrl\x12\x10\n" +
+	"\x03bio\x18\x06 \x01(\tR\x03bio\"C\n" +
 	"\x15UpdateProfileResponse\x12*\n" +
 	"\aprofile\x18\x01 \x01(\v2\x10.profile.ProfileR\aprofile\"\xef\x01\n" +
 	"\aProfile\x12\x0e\n" +

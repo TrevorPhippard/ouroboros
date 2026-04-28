@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"strconv"
 	"strings"
@@ -79,7 +80,25 @@ func (s *ProfileServiceServer) UpdateProfile(ctx context.Context, req *pb.Update
 	var profile models.Profile
 	if err := s.DB.WithContext(ctx).First(&profile, "user_id = ?", req.UserId).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, status.Error(codes.NotFound, "profile not found")
+			profile = models.Profile{
+				ID:          fmt.Sprintf("profile-%s", req.UserId),
+				UserId:      req.UserId,
+				DisplayName: firstNonEmpty(strings.TrimSpace(req.DisplayName), "New User"),
+				AvatarUrl: firstNonEmpty(
+					strings.TrimSpace(req.AvatarUrl),
+					fmt.Sprintf("https://api.dicebear.com/7.x/avataaars/svg?seed=%s", req.UserId),
+				),
+				Bio:      firstNonEmpty(strings.TrimSpace(req.Bio), "Welcome to ouroboros."),
+				Headline: strings.TrimSpace(req.Headline),
+				About:    strings.TrimSpace(req.About),
+			}
+
+			if err := s.DB.WithContext(ctx).Create(&profile).Error; err != nil {
+				log.Printf("profile-service: failed to create profile user_id=%s: %v", req.UserId, err)
+				return nil, status.Error(codes.Internal, "failed to create profile")
+			}
+
+			return &pb.UpdateProfileResponse{Profile: toProtoProfile(&profile)}, nil
 		}
 		log.Printf("profile-service: failed to load profile for update user_id=%s: %v", req.UserId, err)
 		return nil, status.Error(codes.Internal, "failed to load profile")
@@ -91,6 +110,15 @@ func (s *ProfileServiceServer) UpdateProfile(ctx context.Context, req *pb.Update
 	if about := strings.TrimSpace(req.About); about != "" {
 		profile.About = about
 	}
+	if displayName := strings.TrimSpace(req.DisplayName); displayName != "" {
+		profile.DisplayName = displayName
+	}
+	if avatarURL := strings.TrimSpace(req.AvatarUrl); avatarURL != "" {
+		profile.AvatarUrl = avatarURL
+	}
+	if bio := strings.TrimSpace(req.Bio); bio != "" {
+		profile.Bio = bio
+	}
 
 	if err := s.DB.WithContext(ctx).Save(&profile).Error; err != nil {
 		log.Printf("profile-service: failed to update profile user_id=%s: %v", req.UserId, err)
@@ -98,6 +126,15 @@ func (s *ProfileServiceServer) UpdateProfile(ctx context.Context, req *pb.Update
 	}
 
 	return &pb.UpdateProfileResponse{Profile: toProtoProfile(&profile)}, nil
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 func toProtoProfile(profile *models.Profile) *pb.Profile {
@@ -143,4 +180,38 @@ func uniqueNonEmpty(values []string) []string {
 		result = append(result, value)
 	}
 	return result
+}
+
+func (s *ProfileServiceServer) EnsureProfileForUser(
+	ctx context.Context,
+	userID string,
+	displayName string,
+) error {
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return status.Error(codes.InvalidArgument, "user_id is required")
+	}
+
+	var existing models.Profile
+	if err := s.DB.WithContext(ctx).First(&existing, "user_id = ?", userID).Error; err == nil {
+		return nil
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		log.Printf("profile-service: failed checking existing profile user_id=%s: %v", userID, err)
+		return status.Error(codes.Internal, "failed to check profile existence")
+	}
+
+	newProfile := models.Profile{
+		ID:          fmt.Sprintf("profile-%s", userID),
+		UserId:      userID,
+		DisplayName: firstNonEmpty(strings.TrimSpace(displayName), "New User"),
+		AvatarUrl:   fmt.Sprintf("https://api.dicebear.com/7.x/avataaars/svg?seed=%s", userID),
+		Bio:         "New to ouroboros.",
+	}
+
+	if err := s.DB.WithContext(ctx).Create(&newProfile).Error; err != nil {
+		log.Printf("profile-service: failed creating profile from signup event user_id=%s: %v", userID, err)
+		return status.Error(codes.Internal, "failed to create profile")
+	}
+
+	return nil
 }

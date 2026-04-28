@@ -26,13 +26,17 @@ func (r *mutationResolver) SignUp(ctx context.Context, input model.SignUpInput) 
 		return nil, fmt.Errorf("failed to sign up: %w", err)
 	}
 
-	// Assuming SignUp returns the user details. If it only returns an ID,
-	// you'd call r.User(ctx, res.UserId) here.
-	return &model.User{
-		ID:       res.User.Id,
-		Email:    res.User.Email,
-		Username: res.User.Username,
-	}, nil
+	usersByID, err := r.loadUsersByID(ctx, []string{res.User.Id})
+	if err != nil {
+		return nil, fmt.Errorf("failed to load signed-up user: %w", err)
+	}
+
+	user := usersByID[res.User.Id]
+	if user == nil {
+		return nil, fmt.Errorf("failed to resolve signed-up user")
+	}
+
+	return user, nil
 }
 
 // SignIn is the resolver for the signIn field.
@@ -45,13 +49,19 @@ func (r *mutationResolver) SignIn(ctx context.Context, input model.SignInInput) 
 		return nil, fmt.Errorf("invalid credentials: %w", err)
 	}
 
+	usersByID, err := r.loadUsersByID(ctx, []string{res.User.Id})
+	if err != nil {
+		return nil, fmt.Errorf("failed to load signed-in user: %w", err)
+	}
+
+	user := usersByID[res.User.Id]
+	if user == nil {
+		return nil, fmt.Errorf("failed to resolve signed-in user")
+	}
+
 	return &model.AuthPayload{
 		Token: res.Token,
-		User: &model.User{
-			ID:       res.User.Id,
-			Email:    res.User.Email,
-			Username: res.User.Username,
-		},
+		User:  user,
 	}, nil
 }
 

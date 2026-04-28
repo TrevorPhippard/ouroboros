@@ -3,22 +3,13 @@
 import React, { useState } from "react"
 import Link from "next/link"
 import { useAuthStore } from "@/store/useAuthStore"
-import {
-  Home,
-  Users,
-  Briefcase,
-  MessageSquare,
-  Bell,
-  Search,
-  ChevronDown,
-  LogOut,
-} from "lucide-react"
+import { Home, Users, Bell, Search, ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { SignOutButton } from "@/features/auth/components/SignOutButton"
 
 export const Navbar = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
-  const { isAuthenticated, user } = useAuthStore()
+  const { user } = useAuthStore()
 
   // Mock notification counts - these would come from TanStack Query polling
   const unreadNotifications = 3
@@ -107,7 +98,9 @@ export const Navbar = () => {
                     alt=""
                   />
                   <div>
-                    <p className="text-sm font-semibold">{user?.name}</p>
+                    <p className="text-sm font-semibold">
+                      {user?.displayName ?? "User"}
+                    </p>
                     <p className="truncate text-xs text-gray-500">
                       {user?.email}
                     </p>
