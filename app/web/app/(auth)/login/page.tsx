@@ -1,5 +1,3 @@
-"use client"
-
 import { SignInForm } from "@/features/auth/components/SignInForm"
 
 import Link from "next/link"
@@ -14,20 +12,14 @@ export default function LoginPage() {
 
       <div className="w-full max-w-[400px] bg-white p-8 md:rounded-lg md:shadow-md">
         <h1 className="mb-2 text-3xl font-semibold">Sign in</h1>
-        <p className="mb-6 text-sm text-gray-600">Dogs with jobs</p>
+        <p className="mb-6 text-sm text-gray-600">
+          Stay connected with your professional network.
+        </p>
         <SignInForm />
-        <div className="mt-6 flex items-center gap-2 text-gray-400">
-          <div className="h-[1px] flex-1 bg-gray-300"></div>
-          <span className="text-xs">or</span>
-          <div className="h-[1px] flex-1 bg-gray-300"></div>
-        </div>
-        <button className="mt-6 w-full rounded-full border border-gray-600 py-2.5 font-semibold text-gray-600 transition-colors hover:bg-gray-50">
-          Sign in with Poodle
-        </button>
       </div>
 
       <p className="mt-8 text-sm">
-        New to Puppo?{" "}
+        New to ouroboros?{" "}
         <Link
           href="/register"
           className="font-semibold text-[#0a66c2] hover:underline"

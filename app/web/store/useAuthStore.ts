@@ -4,8 +4,10 @@ import { persist, createJSONStorage } from "zustand/middleware"
 interface User {
   id: string
   email: string
-  name: string
-  avatarUrl: string
+  username?: string
+  displayName: string
+  avatarUrl?: string
+  bio?: string
 }
 
 interface AuthState {
@@ -19,18 +21,20 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
-      user: {
-        id: "user-1",
-        email: "alice@example.com",
-        name: "Alice Johnson",
-        avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=user-1",
-      },
+      user: null,
       token: null,
       isAuthenticated: false,
-      setAuth: (user, token) => set({ user, token, isAuthenticated: true }),
+      setAuth: (user, token) => {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("token", token)
+        }
+        set({ user, token, isAuthenticated: true })
+      },
       logout: () => {
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("token")
+        }
         set({ user: null, token: null, isAuthenticated: false })
-        // Optional: clear any sensitive caches
         window.location.href = "/login"
       },
     }),

@@ -5,6 +5,18 @@ import { gqlRequest } from "@/services/graphql/client"
 import { useRouter } from "next/navigation"
 import { SIGN_IN } from "@/lib/queries"
 
+type SignInResponse = {
+  signIn: {
+    token: string
+    user: {
+      id: string
+      email: string
+      username: string
+      displayName?: string | null
+    }
+  }
+}
+
 export function useSignIn() {
   const queryClient = useQueryClient()
   const setAuth = useAuthStore((state) => state.setAuth)
@@ -12,18 +24,28 @@ export function useSignIn() {
 
   return useMutation({
     mutationFn: async (data: SignInValues) => {
-      console.log("Attempting to sign in with:", data)
       return gqlRequest({
         query: SIGN_IN,
         variables: {
-          input: data,
+          input: {
+            email: data.email,
+            password: data.password,
+          },
         },
       })
     },
-    onSuccess: (data: { signIn: { user: any; token: string } }) => {
+    onSuccess: (data: SignInResponse) => {
       const { user, token } = data.signIn
 
-      setAuth(user, token)
+      setAuth(
+        {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          displayName: user.displayName ?? user.username,
+        },
+        token
+      )
 
       queryClient.invalidateQueries({ queryKey: ["user-session"] })
 

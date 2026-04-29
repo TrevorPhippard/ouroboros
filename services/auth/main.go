@@ -1,199 +1,38 @@
 package main
 
 import (
-	"context"
-	"fmt"
 	"log"
-	"net"
-	"net/http"
-	"strings"
+	"os"
 
-	pb "ouroboros/proto/generated/auth"
-
-	"auth/internal/consul"
-
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
-
-	"github.com/hashicorp/consul/api"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"auth/internal/auth"
+	"auth/internal/database"
+	"auth/internal/discovery"
+	"auth/internal/messaging"
+	"auth/internal/transport"
 )
 
-type authServiceServer struct {
-	pb.UnimplementedAuthServiceServer
-}
-
-var seededUsers = map[string]*pb.User{
-	"user-1": {
-		Id:       "user-1",
-		Email:    "alice@example.com",
-		Username: "alice",
-	},
-	"user-2": {
-		Id:       "user-2",
-		Email:    "bob@example.com",
-		Username: "bob",
-	},
-	"user-3": {
-		Id:       "user-3",
-		Email:    "carol@example.com",
-		Username: "carol",
-	},
-}
-
-func (s *authServiceServer) SignIn(ctx context.Context, req *pb.SignInRequest) (*pb.AuthResponse, error) {
-	log.Printf("SignIn attempt: %s", req.Email)
-
-	user := lookupUserByEmail(req.Email)
-	if user == nil {
-		user = &pb.User{
-			Id:       "user-1",
-			Email:    req.Email,
-			Username: "mockuser",
-		}
-	}
-
-	return &pb.AuthResponse{
-		Token: "mock-jwt-token",
-		User:  user,
-	}, nil
-}
-
-func (s *authServiceServer) SignUp(ctx context.Context, req *pb.SignUpRequest) (*pb.AuthResponse, error) {
-	log.Printf("SignUp: %s", req.Email)
-
-	return &pb.AuthResponse{
-		Token: "mock-jwt-token",
-		User: &pb.User{
-			Id:          "new-user-id",
-			Email:       req.Email,
-			Username:    req.DisplayName,
-			DisplayName: req.DisplayName,
-		},
-	}, nil
-}
-
-func (s *authServiceServer) SignOut(ctx context.Context, req *pb.SignOutRequest) (*pb.SignOutResponse, error) {
-	log.Println("SignOut called")
-
-	return &pb.SignOutResponse{
-		Success: true,
-	}, nil
-}
-
-func (s *authServiceServer) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.User, error) {
-	log.Printf("Auth Service: Fetching User ID: %s", req.Id)
-
-	if user, ok := seededUsers[req.Id]; ok {
-		return cloneUser(user), nil
-	}
-
-	return &pb.User{
-		Id:       req.Id,
-		Email:    fmt.Sprintf("user_%s@example.com", req.Id),
-		Username: fmt.Sprintf("user_%s", req.Id),
-	}, nil
-}
-
-func (s *authServiceServer) GetUsersByIds(ctx context.Context, req *pb.GetUsersByIdsRequest) (*pb.GetUsersByIdsResponse, error) {
-	log.Printf("Auth Service: Fetching %d User IDs", len(req.Ids))
-
-	var users []*pb.User
-	for _, id := range req.Ids {
-		if user, ok := seededUsers[id]; ok {
-			users = append(users, cloneUser(user))
-			continue
-		}
-		users = append(users, &pb.User{
-			Id:       id,
-			Email:    fmt.Sprintf("user_%s@example.com", id),
-			Username: fmt.Sprintf("user_%s", id),
-		})
-	}
-
-	return &pb.GetUsersByIdsResponse{Users: users}, nil
-}
-
-func lookupUserByEmail(email string) *pb.User {
-	email = strings.TrimSpace(strings.ToLower(email))
-	for _, user := range seededUsers {
-		if strings.EqualFold(user.Email, email) {
-			return cloneUser(user)
-		}
-	}
-	return nil
-}
-
-func cloneUser(user *pb.User) *pb.User {
-	if user == nil {
-		return nil
-	}
-	return &pb.User{
-		Id:          user.Id,
-		Email:       user.Email,
-		Username:    user.Username,
-		DisplayName: user.DisplayName,
-	}
-}
-
 func main() {
-	// Consul (Docker-safe address)
-	addr := "consul:8500"
-
-	agent := consul.NewAgent(&api.Config{
-		Address: addr,
-	})
-
-	serviceCfg := consul.Config{
-		ServiceID:   "auth-service-1",
-		ServiceName: "auth-service",
-		Address:     "auth-service",
-		Tags:        []string{"grpc", "auth"},
-		Port:        50053,
-
-		// HTTP health check (matches new consul package)
-		Check: &api.AgentServiceCheck{
-			HTTP:     "http://auth-service:8080/health",
-			Interval: "10s",
-			Timeout:  "2s",
-		},
+	dbURL := os.Getenv("DB_URL")
+	jwtSecret := []byte(os.Getenv("JWT_SECRET"))
+	if len(jwtSecret) == 0 {
+		jwtSecret = []byte("super-secret")
 	}
 
-	// Register service (now returns error)
-	if err := agent.RegisterService(serviceCfg); err != nil {
-		log.Fatalf("failed to register service: %v", err)
-	}
+	db := database.Connect(dbURL)
+	database.Migrate(db)
+	database.SeedDB(db)
 
-	// Start HTTP server (metrics + health)
-	go func() {
-		http.Handle("/metrics", promhttp.Handler())
+	discovery.Register("consul:8500", "auth-service", 50053)
 
-		http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("OK"))
-		})
-
-		log.Println("HTTP server running on :8080 (metrics + health)")
-		if err := http.ListenAndServe(":8080", nil); err != nil {
-			log.Fatalf("failed to start HTTP server: %v", err)
+	writer := messaging.NewPostProducer("kafka:9092", "user.signed_up")
+	defer func() {
+		if err := writer.Close(); err != nil {
+			log.Printf("failed to close kafka writer: %v", err)
 		}
 	}()
 
-	// gRPC server
-	lis, err := net.Listen("tcp", ":50053")
-	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
-	}
+	authServer := auth.NewService(db, writer, jwtSecret)
 
-	s := grpc.NewServer()
-
-	pb.RegisterAuthServiceServer(s, &authServiceServer{})
-
-	reflection.Register(s)
-
-	log.Println("Auth Service (gRPC) running on :50053")
-
-	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
-	}
+	go transport.StartHTTPServer(":8080")
+	transport.StartGRPCServer(":50053", authServer)
 }
