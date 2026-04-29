@@ -1,7 +1,7 @@
 package database
 
 import (
-	"auth/internal/models" // Update with your actual module name
+	"auth/internal/auth"
 	"log"
 	"time"
 
@@ -27,7 +27,7 @@ func Connect(dbURL string) *gorm.DB {
 }
 
 func Migrate(db *gorm.DB) {
-	if err := db.AutoMigrate(&models.DBUser{}); err != nil {
+	if err := db.AutoMigrate(&auth.UserRecord{}); err != nil {
 		log.Fatalf("migration failed: %v", err)
 	}
 }
@@ -35,7 +35,7 @@ func Migrate(db *gorm.DB) {
 // SeedDB placeholder logic
 func SeedDB(db *gorm.DB) {
 	var userCount int64
-	db.Model(&models.DBUser{}).Count(&userCount)
+	db.Model(&auth.UserRecord{}).Count(&userCount)
 
 	// Only seed if empty
 	if userCount > 0 {
@@ -45,7 +45,7 @@ func SeedDB(db *gorm.DB) {
 
 	log.Println("Seeding database...")
 
-	users := []models.DBUser{
+	users := []auth.UserRecord{
 		{
 			ID:           "user-1",
 			Email:        "user1@example.com",
