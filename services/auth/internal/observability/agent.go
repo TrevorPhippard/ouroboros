@@ -1,4 +1,4 @@
-package consul
+package observability
 
 import (
 	"fmt"

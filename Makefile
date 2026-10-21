@@ -1,5 +1,8 @@
 .PHONY: infra-up infra-down proto tidy api-gateway auth-service
 
+frontend:
+	./app/web/ npm run start
+
 # Starts just the databases and Kafka
 infra-up:
 	docker-compose up -d postgres neo4j redis zookeeper kafka

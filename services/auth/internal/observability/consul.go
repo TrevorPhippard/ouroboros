@@ -1,16 +1,15 @@
-package discovery
+package observability
 
 import (
-	"auth/internal/consul" // Your local consul package
 	"log"
 
 	"github.com/hashicorp/consul/api"
 )
 
 func Register(addr string, serviceName string, port int) {
-	agent := consul.NewAgent(&api.Config{Address: addr})
+	agent := NewAgent(&api.Config{Address: addr})
 
-	serviceCfg := consul.Config{
+	serviceCfg := Config{
 		ServiceID:   serviceName + "-1",
 		ServiceName: serviceName,
 		Address:     serviceName, // Or use hostname/IP

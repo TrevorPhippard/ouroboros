@@ -7,7 +7,7 @@ export default function RegisterPage() {
     <div className="flex min-h-screen flex-col items-center bg-white pt-12 md:bg-[#f3f2ef]">
       {/* Brand Logo */}
       <div className="mb-8 flex w-40 items-center gap-1">
-        <img src="cleo.png" alt="" />
+        <img src="mini.svg" alt="" />
       </div>
 
       <div className="w-full max-w-[400px] bg-white p-8 md:rounded-lg md:shadow-md">
