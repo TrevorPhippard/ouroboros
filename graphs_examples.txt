@@ -99,3 +99,9 @@ status:UNTESTED
 mutation ClearNotification {
   markNotificationRead(id: "notif_uuid_1")
 }
+
+Puppachino
+pup@pupmail.com
+Arf1001!
+
+"failed to load signed-up user: rpc error: code = Unimplemented desc = get users by ids is not wired to a persistent user store yet"

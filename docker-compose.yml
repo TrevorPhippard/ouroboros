@@ -171,9 +171,9 @@ services:
     networks:
       - mesh
 
-  # ==========================================
+  # =============================================
   # gRPC MICROSERVICES (Now built via Dockerfile)
-  # ==========================================
+  # =============================================
   auth-service:
     build:
       context: .
@@ -184,6 +184,7 @@ services:
     environment:
       - DB_URL=postgres://admin:password@postgres:5432/ouroboros?sslmode=disable
       - KAFKA_BROKER=kafka:9092
+      - JWT_SECRET="jwtsecret"
     ports:
       - "50053:50053"
     depends_on:

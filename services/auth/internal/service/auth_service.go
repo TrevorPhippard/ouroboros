@@ -177,96 +177,119 @@ func (s *Service) SignOut(
 	return &pb.SignOutResponse{Success: true}, nil
 }
 
-// CRUD methods retained for compatibility with existing callers.
-
-func (s *Service) CreateEntry(
+func (s *Service) GetUser(
 	ctx context.Context,
-	entry *domain.UserRecord,
-) (*domain.UserRecord, error) {
-	if entry == nil {
-		return nil, errors.New("entry is required")
+	req *pb.GetUserRequest,
+) (*pb.User, error) {
+	if req == nil || req.Id == "" {
+		return nil, status.Error(
+			codes.InvalidArgument,
+			"user id is required",
+		)
 	}
 
-	if entry.ID == "" {
-		entry.ID = uuid.NewString()
-	}
+	var user domain.UserRecord
+	err := s.DB.WithContext(ctx).
+		Where("id = ?", req.Id).
+		First(&user).Error
 
-	if err := s.DB.WithContext(ctx).Create(entry).Error; err != nil {
-		return nil, err
-	}
-
-	return entry, nil
-}
-
-func (s *Service) GetEntry(
-	ctx context.Context,
-	id string,
-) (*domain.UserRecord, error) {
-	var entry domain.UserRecord
-	if err := s.DB.WithContext(ctx).
-		First(&entry, "id = ?", id).Error; err != nil {
-		return nil, err
-	}
-	return &entry, nil
-}
-
-func (s *Service) GetEntries(
-	ctx context.Context,
-	limit, offset int,
-) ([]*domain.UserRecord, error) {
-	if limit <= 0 {
-		limit = 50
-	}
-	if offset < 0 {
-		offset = 0
-	}
-
-	var entries []*domain.UserRecord
-	if err := s.DB.WithContext(ctx).
-		Limit(limit).
-		Offset(offset).
-		Find(&entries).Error; err != nil {
-		return nil, err
-	}
-
-	return entries, nil
-}
-
-func (s *Service) UpdateEntry(
-	ctx context.Context,
-	entry *domain.UserRecord,
-) (*domain.UserRecord, error) {
-	if entry == nil {
-		return nil, errors.New("entry is required")
-	}
-
-	result := s.DB.WithContext(ctx).
-		Model(&domain.UserRecord{}).
-		Where("id = ?", entry.ID).
-		Update("display_name", entry.DisplayName)
-
-	if result.Error != nil {
-		return nil, result.Error
-	}
-	if result.RowsAffected == 0 {
-		return nil, gorm.ErrRecordNotFound
-	}
-
-	return s.GetEntry(ctx, entry.ID)
-}
-
-func (s *Service) DeleteEntry(
-	ctx context.Context,
-	id string,
-) (*domain.UserRecord, error) {
-	entry, err := s.GetEntry(ctx, id)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, status.Error(
+				codes.NotFound,
+				"user not found",
+			)
+		}
+
+		s.logger.Error(
+			"Failed to get user",
+			"user_id", req.Id,
+			"error", err,
+		)
+		return nil, status.Error(
+			codes.Internal,
+			"database error",
+		)
 	}
 
-	if err := s.DB.WithContext(ctx).Delete(entry).Error; err != nil {
-		return nil, err
+	return &pb.User{
+		Id:          user.ID,
+		Email:       user.Email,
+		DisplayName: user.DisplayName,
+	}, nil
+}
+
+func (s *Service) GetUsersByIds(
+	ctx context.Context,
+	req *pb.GetUsersByIdsRequest,
+) (*pb.GetUsersByIdsResponse, error) {
+	if req == nil || len(req.Ids) == 0 {
+		return nil, status.Error(
+			codes.InvalidArgument,
+			"user ids are required",
+		)
 	}
 
-	return entry, nil
+	// Remove empty IDs and duplicates while preserving input order.
+	ids := make([]string, 0, len(req.Ids))
+	seen := make(map[string]struct{}, len(req.Ids))
+
+	for _, id := range req.Ids {
+		if id == "" {
+			continue
+		}
+
+		if _, exists := seen[id]; exists {
+			continue
+		}
+
+		seen[id] = struct{}{}
+		ids = append(ids, id)
+	}
+
+	if len(ids) == 0 {
+		return nil, status.Error(
+			codes.InvalidArgument,
+			"at least one valid user id is required",
+		)
+	}
+
+	var records []domain.UserRecord
+	err := s.DB.WithContext(ctx).
+		Where("id IN ?", ids).
+		Find(&records).Error
+
+	if err != nil {
+		s.logger.Error(
+			"Failed to get users by ids",
+			"error", err,
+		)
+		return nil, status.Error(
+			codes.Internal,
+			"database error",
+		)
+	}
+
+	// Index results by ID because SQL IN queries do not guarantee order.
+	usersByID := make(map[string]*pb.User, len(records))
+
+	for _, record := range records {
+		usersByID[record.ID] = &pb.User{
+			Id:          record.ID,
+			Email:       record.Email,
+			DisplayName: record.DisplayName,
+		}
+	}
+
+	// Return existing users in the same order as the requested IDs.
+	users := make([]*pb.User, 0, len(records))
+	for _, id := range ids {
+		if user, exists := usersByID[id]; exists {
+			users = append(users, user)
+		}
+	}
+
+	return &pb.GetUsersByIdsResponse{
+		Users: users,
+	}, nil
 }
