@@ -16,9 +16,9 @@ export const Navbar = () => {
 
   const navItems = [
     { icon: Home, label: "Home", href: "/feed" },
-    { icon: Users, label: "register", href: "/register" },
-    { icon: Users, label: "login", href: "/login" },
     { icon: Users, label: "profile", href: "/profile" },
+    // { icon: Users, label: "register", href: "/register" },
+    // { icon: Users, label: "login", href: "/login" },
     {
       icon: Bell,
       label: "Notifications",
@@ -32,7 +32,8 @@ export const Navbar = () => {
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
         {/* Left: Logo & Search */}
         <div className="flex flex-1 items-center gap-2">
-          <div className="rounded bg-[#494453] p-1 text-xl leading-none font-bold text-white">
+          <img src="/mini.svg" alt="ourobous icon" width={30} height={30} />
+          <div className="rounded p-1 text-xl leading-none font-bold">
             οὐροβόρος
           </div>
           <div className="relative hidden w-full max-w-xs md:block">
