@@ -1,21 +1,159 @@
-status:PASS
+/**
 
-query GetUserProfile {
-  user(id: "user_99") {
-    id
-    username
-    email
-    displayName
-    avatarUrl
-    bio
+------------------------------------------------------------------------
+service PostService
+------------------------------------------------------------------------
+  status:UNTESTED
+  mutation CreateNewPost {
+    createPost(input: {
+      authorId: "user_01",
+      content: "Ouroboros is officially online! 🐍"
+    }) {
+      id
+      content
+      createdAt
+      author {
+        username
+      }
+    }
   }
-}
 
-status:UNTESTED
 
-mutation FollowSomeone {
-  followUser(followerId: "me_123", followeeId: "them_456")
-}
+  status:FAIL
+  query GetPost {
+    post(id: "post_uuid_1") {
+      content
+      author {
+        displayName
+      }
+      comments(limit: 5) {
+        id
+        content
+        author {
+          username
+        }
+      }
+    }
+  }
+
+
+  status:UNTESTED
+  GetPostsByIds
+
+  status:UNTESTED
+  GetCommentsByPostId
+
+------------------------------------------------------------------------
+service ProfileService
+------------------------------------------------------------------------
+
+  status:PASS
+  query GetUserProfile {
+    user(id: "user_99") {
+      id
+      username
+      email
+      displayName
+      avatarUrl
+      bio
+    }
+  }
+
+  status:UNTESTED
+  GetProfilesByUserIds
+
+  status:UNTESTED
+  UpdateProfile
+
+------------------------------------------------------------------------
+service NotificationService
+------------------------------------------------------------------------
+  status:PASS
+  query MyNotifications {
+    notifications(userId: "user_01", limit: 10) {
+      id
+      type
+      read
+      createdAt
+      actor {
+        username
+      }
+    }
+  }
+
+  status:UNTESTED
+  mutation ClearNotification {
+    markNotificationRead(id: "notif_uuid_1")
+  }
+
+------------------------------------------------------------------------
+service ConnectionService
+------------------------------------------------------------------------
+  status:UNTESTED
+
+  mutation FollowSomeone {
+    followUser(followerId: "me_123", followeeId: "them_456")
+  }
+
+  status:UNTESTED
+  UnfollowUser
+
+  status:UNTESTED
+  GetFollowersCount
+
+  status:UNTESTED
+  GetFollowingCount
+
+  status:UNTESTED
+  IsFollowing
+
+
+------------------------------------------------------------------------
+service FeedService
+------------------------------------------------------------------------
+  status:PASS
+  query GetMyFeed {
+    feed(userId: "user_01", limit: 10) {
+      items {
+        postId
+        cursor
+        post {
+          content
+          author {
+            username
+            avatarUrl
+          }
+        }
+      }
+    }
+  }
+
+------------------------------------------------------------------------
+service AuthService
+------------------------------------------------------------------------
+
+  status:UNTESTED
+  SignUp
+
+  status:UNTESTED
+  SignIn
+
+  status:UNTESTED
+  SignOut
+
+
+  status:UNTESTED
+  GetUser
+
+  status:UNTESTED
+  GetUsersByIds
+ */
+
+
+------------------------------------------------------------------------------
+  Examples
+------------------------------------------------------------------------------
+
 
 status:PASS
 
@@ -28,80 +166,6 @@ query CheckSocialStats {
   }
 }
 
-status:UNTESTED
 
-mutation CreateNewPost {
-  createPost(input: {
-    authorId: "user_01",
-    content: "Ouroboros is officially online! 🐍"
-  }) {
-    id
-    content
-    createdAt
-    author {
-      username
-    }
-  }
-}
 
-status:FAIL
 
-query GetPost {
-  post(id: "post_uuid_1") {
-    content
-    author {
-      displayName
-    }
-    comments(limit: 5) {
-      id
-      content
-      author {
-        username
-      }
-    }
-  }
-}
-
-status:PASS
-
-query GetMyFeed {
-  feed(userId: "user_01", limit: 10) {
-    items {
-      postId
-      cursor
-      post {
-        content
-        author {
-          username
-          avatarUrl
-        }
-      }
-    }
-  }
-}
-
-status:PASS
-
-query MyNotifications {
-  notifications(userId: "user_01", limit: 10) {
-    id
-    type
-    read
-    createdAt
-    actor {
-      username
-    }
-  }
-}
-
-status:UNTESTED
-
-mutation ClearNotification {
-  markNotificationRead(id: "notif_uuid_1")
-}
-
-Puppachino
-pup@pupmail.com
-Arf1001!
-
-"failed to load signed-up user: rpc error: code = Unimplemented desc = get users by ids is not wired to a persistent user store yet"

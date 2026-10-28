@@ -9,6 +9,7 @@ export const FeedList = () => {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } =
     useInfiniteQuery(queryOptions)
 
+  console.log({ data: data })
   // 'status' will be 'success' immediately upon mount due to SSR hydration
   if (status === "pending") {
     return (

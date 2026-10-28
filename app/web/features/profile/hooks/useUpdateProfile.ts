@@ -15,31 +15,44 @@ export const useUpdateProfile = () => {
         variables: {
           userId,
           input: {
+            name: newProfile.name,
             headline: newProfile.headline,
             about: newProfile.about,
+            avatarUrl: newProfile.avatarUrl,
           },
         },
       }),
 
     onMutate: async (newProfile: Partial<ProfileType>) => {
-      await queryClient.cancelQueries({ queryKey: ["profile", userId] })
+      await queryClient.cancelQueries({
+        queryKey: ["profile", userId],
+      })
+
       const previousProfile = queryClient.getQueryData<ProfileType>([
         "profile",
         userId,
       ])
+
       if (previousProfile) {
         queryClient.setQueryData<ProfileType>(["profile", userId], {
           ...previousProfile,
           ...newProfile,
         })
       }
+
       return { previousProfile }
     },
-    onError: (err, newProfile, context) => {
-      queryClient.setQueryData(["profile", userId], context?.previousProfile)
+
+    onError: (_error, _newProfile, context) => {
+      if (context?.previousProfile) {
+        queryClient.setQueryData(["profile", userId], context.previousProfile)
+      }
     },
+
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["profile", userId] })
+      queryClient.invalidateQueries({
+        queryKey: ["profile", userId],
+      })
     },
   })
 }

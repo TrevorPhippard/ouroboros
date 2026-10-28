@@ -2,14 +2,14 @@ import { z } from "zod"
 
 export const signInSchema = z.object({
   email: z.email("Please enter a valid email address."),
-  password: z.string().min(8, "Password must be at least 8 characters."),
+  password: z.string().min(4, "Password must be at least 4 characters."),
 })
 
 export const signUpSchema = z
   .object({
     name: z.string().min(2, "Name must be at least 2 characters."),
     email: z.email("Please enter a valid email address."),
-    password: z.string().min(8, "Password must be at least 8 characters."),
+    password: z.string().min(4, "Password must be at least 4 characters."),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
