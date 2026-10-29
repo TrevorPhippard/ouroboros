@@ -21,9 +21,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// =========================
-// AUTH MESSAGES
-// =========================
 type SignUpRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Email         string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
@@ -268,9 +265,6 @@ func (x *SignOutResponse) GetSuccess() bool {
 	return false
 }
 
-// =========================
-// USER QUERIES
-// =========================
 type GetUserRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -403,9 +397,6 @@ func (x *GetUsersByIdsResponse) GetUsers() []*User {
 	return nil
 }
 
-// =========================
-// DOMAIN MODELS
-// =========================
 type User struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`

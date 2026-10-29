@@ -4,6 +4,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
+	"time"
 
 	"api-gateway/graph"
 
@@ -24,10 +26,29 @@ import (
 
 // Helper function to get env or fallback
 func getEnv(key, fallback string) string {
-	if value, exists := os.LookupEnv(key); exists {
-		return value
+	if value, exists := os.LookupEnv(key); exists && strings.TrimSpace(value) != "" {
+		return strings.TrimSpace(value)
 	}
 	return fallback
+}
+
+func csvEnv(key string, fallback []string) []string {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback
+	}
+
+	var values []string
+	for _, item := range strings.Split(value, ",") {
+		item = strings.TrimSpace(item)
+		if item != "" {
+			values = append(values, item)
+		}
+	}
+	if len(values) == 0 {
+		return fallback
+	}
+	return values
 }
 
 // dialService encapsulates gRPC client creation and fatal error handling.
@@ -78,17 +99,49 @@ func main() {
 
 	srv := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: resolver}))
 
-	// Configure CORS
+	// Configure CORS through the environment instead of hard-coding one LAN IP.
 	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000", "http://192.168.2.225:3000"},
+		AllowedOrigins:   csvEnv("CORS_ALLOWED_ORIGINS", []string{"http://localhost:3000", "http://127.0.0.1:3000"}),
 		AllowCredentials: true,
 		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
 		AllowedHeaders:   []string{"Authorization", "Content-Type"},
 	})
 
-	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
-	http.Handle("/query", c.Handler(srv))
+	mux := http.NewServeMux()
 
-	log.Printf("Ouroboros Gateway live at http://localhost:%s/", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	// Register both GraphQL endpoints.
+	graphqlHandler := http.MaxBytesHandler(srv, 1<<20)
+	mux.Handle("/graphql", graphqlHandler)
+	mux.Handle("/query", graphqlHandler) // Backward compatibility
+
+	mux.Handle("/", playground.Handler("GraphQL Playground", "/graphql"))
+
+	// Health check.
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok\n"))
+	})
+
+	jwtSecret := getEnv("JWT_SECRET", "JWT_SECRET")
+	if jwtSecret == "" {
+		log.Printf("WARNING: JWT_SECRET is not set; authenticated GraphQL operations will be rejected")
+	}
+
+	server := &http.Server{
+		Addr:              ":" + port,
+		Handler:           c.Handler(AuthContextMiddleware(jwtSecret, mux)),
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+
+	log.Printf("Ouroboros Gateway listening on :%s", port)
+	log.Fatal(server.ListenAndServe())
 }

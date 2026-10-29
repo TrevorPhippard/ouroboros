@@ -17,6 +17,7 @@ type Query {
   # Posts
   post(id: ID!): Post
   postsByIds(ids: [ID!]!): [Post!]!
+  posts(limit: Int = 10): [Post!]!
 
   # Feed & Notifications
   feed(userId: ID!, limit: Int = 20, cursor: String): FeedResponse
@@ -30,7 +31,7 @@ type Query {
 
 type Mutation {
   # Auth
-  signUp(input: SignUpInput!): User!
+  signUp(input: SignUpInput!): AuthPayload!
   signIn(input: SignInInput!): AuthPayload!
   signOut: SignOutResponse!
 
@@ -43,9 +44,8 @@ type Mutation {
   likePost(postId: ID!): Post!
 
   # Connection Service
-  sendConnect(userId: ID!): ConnectResponse!
-  #   followUser(followerId: ID!, followeeId: ID!): Boolean!
-  # unfollowUser(followerId: ID!, followeeId: ID!): Boolean!
+  followUser(userId: ID!): ConnectResponse!
+  unfollowUser(userId: ID!): ConnectResponse!
 
   # Notification Service
   markNotificationRead(id: ID!): Boolean!
@@ -78,8 +78,12 @@ type User {
 
 type Profile {
   id: ID!
+  userId: ID!
   headline: String
   about: String
+  displayName: String
+  avatarUrl: String
+  bio: String
   experiences: [Experience!]!
 }
 
@@ -89,6 +93,7 @@ type Experience {
   company: String!
   startDate: String!
   endDate: String
+  description: String!
 }
 
 type Post {
@@ -140,7 +145,7 @@ type FeedItem {
 
 type FeedResponse {
   items: [FeedItem!]!
-  # Add PageInfo here if you uncomment common.proto in your Feed service
+  nextCursor: String
 }
 
 # ------------------------
@@ -182,6 +187,9 @@ input SignInInput {
 input UpdateProfileInput {
   headline: String
   about: String
+  displayName: String
+  avatarUrl: String
+  bio: String
 }
 
 # ------------------------

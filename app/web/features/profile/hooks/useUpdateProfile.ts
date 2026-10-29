@@ -16,7 +16,7 @@ export const useUpdateProfile = () => {
           userId,
           input: {
             name: newProfile.name,
-            headline: newProfile.headline,
+            headline: newProfile.displayName,
             about: newProfile.about,
             avatarUrl: newProfile.avatarUrl,
           },

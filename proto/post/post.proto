@@ -8,11 +8,12 @@ option go_package = "ouroboros/proto/post";
 
 service PostService {
   rpc CreatePost (CreatePostRequest) returns (Post);
-
   rpc GetPost (GetPostRequest) returns (Post);
   rpc GetPostsByIds (GetPostsByIdsRequest) returns (GetPostsByIdsResponse);
-
+  rpc GetPostsByAuthorId (GetPostsByAuthorIdRequest) returns (GetPostsByAuthorIdResponse);
+  rpc CreateComment (CreateCommentRequest) returns (Comment);
   rpc GetCommentsByPostId (GetCommentsRequest) returns (GetCommentsResponse);
+  rpc LikePost (LikePostRequest) returns (LikePostResponse);
 }
 
 message CreatePostRequest {
@@ -30,6 +31,21 @@ message GetPostsByIdsRequest {
 
 message GetPostsByIdsResponse {
   repeated Post posts = 1;
+}
+
+message GetPostsByAuthorIdRequest {
+  string author_id = 1;
+  int32 limit = 2;
+}
+
+message GetPostsByAuthorIdResponse {
+  repeated Post posts = 1;
+}
+
+message CreateCommentRequest {
+  string post_id = 1;
+  string author_id = 2;
+  string content = 3;
 }
 
 message GetCommentsRequest {
@@ -55,4 +71,13 @@ message Comment {
   string author_id = 3;
   string content = 4;
   string created_at = 5;
+}
+
+message LikePostRequest {
+  string post_id = 1;
+  string user_id = 2;
+}
+
+message LikePostResponse {
+  bool success = 1;
 }

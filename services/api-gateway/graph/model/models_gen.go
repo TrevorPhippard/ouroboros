@@ -32,11 +32,12 @@ type CreatePostInput struct {
 }
 
 type Experience struct {
-	ID        string  `json:"id"`
-	Title     string  `json:"title"`
-	Company   string  `json:"company"`
-	StartDate string  `json:"startDate"`
-	EndDate   *string `json:"endDate,omitempty"`
+	ID          string  `json:"id"`
+	Title       string  `json:"title"`
+	Company     string  `json:"company"`
+	StartDate   string  `json:"startDate"`
+	EndDate     *string `json:"endDate,omitempty"`
+	Description string  `json:"description"`
 }
 
 type FeedItem struct {
@@ -46,7 +47,8 @@ type FeedItem struct {
 }
 
 type FeedResponse struct {
-	Items []*FeedItem `json:"items"`
+	Items      []*FeedItem `json:"items"`
+	NextCursor *string     `json:"nextCursor,omitempty"`
 }
 
 type Mutation struct {
@@ -74,8 +76,12 @@ type Post struct {
 
 type Profile struct {
 	ID          string        `json:"id"`
+	UserID      string        `json:"userId"`
 	Headline    *string       `json:"headline,omitempty"`
 	About       *string       `json:"about,omitempty"`
+	DisplayName *string       `json:"displayName,omitempty"`
+	AvatarURL   *string       `json:"avatarUrl,omitempty"`
+	Bio         *string       `json:"bio,omitempty"`
 	Experiences []*Experience `json:"experiences"`
 }
 
@@ -101,8 +107,11 @@ type Subscription struct {
 }
 
 type UpdateProfileInput struct {
-	Headline *string `json:"headline,omitempty"`
-	About    *string `json:"about,omitempty"`
+	Headline    *string `json:"headline,omitempty"`
+	About       *string `json:"about,omitempty"`
+	DisplayName *string `json:"displayName,omitempty"`
+	AvatarURL   *string `json:"avatarUrl,omitempty"`
+	Bio         *string `json:"bio,omitempty"`
 }
 
 type User struct {

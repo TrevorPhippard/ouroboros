@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"time"
 
 	authpb "ouroboros/proto/generated/auth"
 	connpb "ouroboros/proto/generated/connection"
@@ -15,8 +14,20 @@ import (
 	profilepb "ouroboros/proto/generated/profile"
 )
 
+func optionalString(s string) *string {
+	if s == "" {
+		return nil
+	}
+
+	value := s
+	return &value
+}
+
 // SignUp is the resolver for the signUp field.
-func (r *mutationResolver) SignUp(ctx context.Context, input model.SignUpInput) (*model.User, error) {
+func (r *mutationResolver) SignUp(
+	ctx context.Context,
+	input model.SignUpInput,
+) (*model.AuthPayload, error) {
 	res, err := r.AuthClient.SignUp(ctx, &authpb.SignUpRequest{
 		Email:       input.Email,
 		Password:    input.Password,
@@ -24,6 +35,10 @@ func (r *mutationResolver) SignUp(ctx context.Context, input model.SignUpInput) 
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to sign up: %w", err)
+	}
+
+	if res == nil || res.User == nil {
+		return nil, fmt.Errorf("sign-up returned no user")
 	}
 
 	usersByID, err := r.loadUsersByID(ctx, []string{res.User.Id})
@@ -36,7 +51,10 @@ func (r *mutationResolver) SignUp(ctx context.Context, input model.SignUpInput) 
 		return nil, fmt.Errorf("failed to resolve signed-up user")
 	}
 
-	return user, nil
+	return &model.AuthPayload{
+		Token: res.Token,
+		User:  user,
+	}, nil
 }
 
 // SignIn is the resolver for the signIn field.
@@ -47,6 +65,10 @@ func (r *mutationResolver) SignIn(ctx context.Context, input model.SignInInput) 
 	})
 	if err != nil {
 		return nil, fmt.Errorf("invalid credentials: %w", err)
+	}
+
+	if res == nil || res.User == nil {
+		return nil, fmt.Errorf("sign-in returned no user")
 	}
 
 	usersByID, err := r.loadUsersByID(ctx, []string{res.User.Id})
@@ -67,7 +89,10 @@ func (r *mutationResolver) SignIn(ctx context.Context, input model.SignInInput) 
 
 // SignOut is the resolver for the signOut field.
 func (r *mutationResolver) SignOut(ctx context.Context) (*model.SignOutResponse, error) {
-	// Usually requires passing the token via gRPC metadata extracted from ctx
+	if _, err := requireCurrentUserID(ctx); err != nil {
+		return nil, err
+	}
+	// Authentication middleware should also propagate the bearer token as gRPC metadata.
 	_, err := r.AuthClient.SignOut(ctx, &authpb.SignOutRequest{})
 	if err != nil {
 		return &model.SignOutResponse{Success: false}, err
@@ -76,77 +101,97 @@ func (r *mutationResolver) SignOut(ctx context.Context) (*model.SignOutResponse,
 }
 
 // UpdateProfile is the resolver for the updateProfile field.
-func (r *mutationResolver) UpdateProfile(ctx context.Context, userID string, input model.UpdateProfileInput) (*model.Profile, error) {
-	// Convert pointers safely
-	var headline, about string
-	if input.Headline != nil {
-		headline = *input.Headline
+func (r *mutationResolver) UpdateProfile(
+	ctx context.Context,
+	userID string,
+	input model.UpdateProfileInput,
+) (*model.Profile, error) {
+	authenticatedUserID, err := requireCurrentUserID(ctx)
+	if err != nil {
+		return nil, err
 	}
-	if input.About != nil {
-		about = *input.About
+	if authenticatedUserID != userID {
+		return nil, fmt.Errorf("forbidden: cannot update another user's profile")
 	}
 
-	res, err := r.ProfileClient.UpdateProfile(ctx, &profilepb.UpdateProfileRequest{
-		UserId:   userID,
-		Headline: headline,
-		About:    about,
-	})
+	req := &profilepb.UpdateProfileRequest{
+		UserId: userID,
+	}
+
+	if input.Headline != nil {
+		req.Headline = *input.Headline
+	}
+	if input.About != nil {
+		req.About = *input.About
+	}
+	if input.DisplayName != nil {
+		req.DisplayName = *input.DisplayName
+	}
+	if input.AvatarURL != nil {
+		req.AvatarUrl = *input.AvatarURL
+	}
+	if input.Bio != nil {
+		req.Bio = *input.Bio
+	}
+
+	res, err := r.ProfileClient.UpdateProfile(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update profile: %w", err)
 	}
 
+	if res == nil || res.Profile == nil {
+		return nil, fmt.Errorf("profile service returned no profile")
+	}
+
+	p := res.Profile
+
+	experiences := make([]*model.Experience, 0, len(p.Experiences))
+	for _, e := range p.Experiences {
+		if e == nil {
+			continue
+		}
+
+		experiences = append(experiences, &model.Experience{
+			ID:          e.Id,
+			Title:       e.Title,
+			Company:     e.Company,
+			StartDate:   e.StartDate,
+			EndDate:     optionalString(e.EndDate),
+			Description: e.Description,
+		})
+	}
+
 	return &model.Profile{
-		ID:       res.Profile.Id,
-		Headline: &res.Profile.Headline,
-		About:    &res.Profile.About,
-		// Assuming experiences need mapping too
+		ID:          p.Id,
+		UserID:      p.UserId,
+		Headline:    optionalString(p.Headline),
+		About:       optionalString(p.About),
+		DisplayName: optionalString(p.DisplayName),
+		AvatarURL:   optionalString(p.AvatarUrl),
+		Bio:         optionalString(p.Bio),
+		Experiences: experiences,
 	}, nil
 }
 
 // CreatePost is the resolver for the createPost mutation.
 func (r *mutationResolver) CreatePost(ctx context.Context, input model.CreatePostInput) (*model.Post, error) {
-	res, err := r.PostClient.CreatePost(ctx, &postpb.CreatePostRequest{
-		AuthorId: input.AuthorID,
-		Content:  input.Content,
-	})
+	userID, err := requireCurrentUserID(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	return &model.Post{
-		ID:        res.Id,
-		Content:   res.Content,
-		CreatedAt: res.CreatedAt,
-		AuthorID:  res.AuthorId,
-	}, nil
-}
-
-// CreateComment is the resolver for the createComment field.
-func (r *mutationResolver) CreateComment(ctx context.Context, input model.CreateCommentInput) (*model.Comment, error) {
-	if _, err := r.PostClient.GetPost(ctx, &postpb.GetPostRequest{Id: input.PostID}); err != nil {
-		return nil, fmt.Errorf("failed to find post for comment: %w", err)
+	if input.AuthorID != userID {
+		return nil, fmt.Errorf("forbidden: post author must be the authenticated user")
 	}
 
-	usersByID, err := r.loadUsersByID(ctx, []string{input.AuthorID})
+	res, err := r.PostClient.CreatePost(ctx, &postpb.CreatePostRequest{
+		AuthorId: userID,
+		Content:  input.Content,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to hydrate comment author: %w", err)
+		return nil, fmt.Errorf("failed to create post: %w", err)
 	}
-
-	return &model.Comment{
-		ID:        fmt.Sprintf("comment-%d", time.Now().UnixNano()),
-		PostID:    input.PostID,
-		AuthorID:  input.AuthorID,
-		Content:   input.Content,
-		CreatedAt: time.Now().UTC().Format(time.RFC3339),
-		Author:    usersByID[input.AuthorID],
-	}, nil
-}
-
-// LikePost is the resolver for the likePost field.
-func (r *mutationResolver) LikePost(ctx context.Context, postID string) (*model.Post, error) {
-	res, err := r.PostClient.GetPost(ctx, &postpb.GetPostRequest{Id: postID})
-	if err != nil {
-		return nil, fmt.Errorf("failed to like post: %w", err)
+	if res == nil {
+		return nil, fmt.Errorf("post service returned no post")
 	}
 
 	post := &model.Post{
@@ -154,10 +199,113 @@ func (r *mutationResolver) LikePost(ctx context.Context, postID string) (*model.
 		Content:   res.Content,
 		CreatedAt: res.CreatedAt,
 		AuthorID:  res.AuthorId,
+		Comments:  []*model.Comment{},
+	}
+	if err := r.attachAuthorsToPosts(ctx, []*model.Post{post}); err != nil {
+		return nil, fmt.Errorf("post was created but its author could not be loaded: %w", err)
+	}
+	return post, nil
+}
+
+// CreateComment is the resolver for the createComment field.
+func (r *mutationResolver) CreateComment(
+	ctx context.Context,
+	input model.CreateCommentInput,
+) (*model.Comment, error) {
+	userID, err := requireCurrentUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if input.AuthorID != userID {
+		return nil, fmt.Errorf("forbidden: comment author must be the authenticated user")
+	}
+
+	// Validate the post before attempting to create a comment.
+	postRes, err := r.PostClient.GetPost(ctx, &postpb.GetPostRequest{
+		Id: input.PostID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to find post for comment: %w", err)
+	}
+	if postRes == nil {
+		return nil, fmt.Errorf("post service returned no post")
+	}
+
+	// Verify that the author can be resolved.
+	usersByID, err := r.loadUsersByID(ctx, []string{userID})
+	if err != nil {
+		return nil, fmt.Errorf("failed to load comment author: %w", err)
+	}
+
+	author := usersByID[userID]
+	if author == nil {
+		return nil, fmt.Errorf("comment author not found")
+	}
+
+	// Persist the comment through the post service.
+	res, err := r.PostClient.CreateComment(ctx, &postpb.CreateCommentRequest{
+		PostId:   input.PostID,
+		AuthorId: userID,
+		Content:  input.Content,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create comment: %w", err)
+	}
+	if res == nil {
+		return nil, fmt.Errorf("post service returned no comment")
+	}
+
+	return &model.Comment{
+		ID:        res.Id,
+		PostID:    res.PostId,
+		AuthorID:  res.AuthorId,
+		Content:   res.Content,
+		CreatedAt: res.CreatedAt,
+		Author:    author,
+	}, nil
+}
+
+// LikePost is the resolver for the likePost field.
+func (r *mutationResolver) LikePost(
+	ctx context.Context,
+	postID string,
+) (*model.Post, error) {
+	userID, err := requireCurrentUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	likeRes, err := r.PostClient.LikePost(ctx, &postpb.LikePostRequest{
+		PostId: postID,
+		UserId: userID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to like post: %w", err)
+	}
+	if likeRes == nil || !likeRes.Success {
+		return nil, fmt.Errorf("post could not be liked")
+	}
+
+	res, err := r.PostClient.GetPost(ctx, &postpb.GetPostRequest{
+		Id: postID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch liked post: %w", err)
+	}
+	if res == nil {
+		return nil, fmt.Errorf("post service returned no post")
+	}
+
+	post := &model.Post{
+		ID:        res.Id,
+		Content:   res.Content,
+		CreatedAt: res.CreatedAt,
+		AuthorID:  res.AuthorId,
+		Comments:  []*model.Comment{},
 	}
 
 	if err := r.attachAuthorsToPosts(ctx, []*model.Post{post}); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to hydrate liked post author: %w", err)
 	}
 
 	return post, nil
@@ -165,35 +313,47 @@ func (r *mutationResolver) LikePost(ctx context.Context, postID string) (*model.
 
 // SendConnect is the resolver for the sendConnect field.
 func (r *mutationResolver) SendConnect(ctx context.Context, userID string) (*model.ConnectResponse, error) {
+	followerID, err := requireCurrentUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
 	res, err := r.ConnectionClient.FollowUser(ctx, &connpb.FollowUserRequest{
-		FollowerId: currentUserIDFromContext(ctx),
+		FollowerId: followerID,
 		FolloweeId: userID,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to send connection request: %w", err)
+	}
+	if res == nil {
+		return nil, fmt.Errorf("connection service returned no response")
 	}
 	return &model.ConnectResponse{Success: res.Success}, nil
 }
 
 // MarkNotificationRead is the resolver for the markNotificationRead field.
 func (r *mutationResolver) MarkNotificationRead(ctx context.Context, id string) (bool, error) {
+	if _, err := requireCurrentUserID(ctx); err != nil {
+		return false, err
+	}
 	res, err := r.NotificationClient.MarkAsRead(ctx, &notificationpb.MarkAsReadRequest{
 		NotificationId: id,
 	})
 	if err != nil {
 		return false, fmt.Errorf("failed to mark notification as read: %w", err)
 	}
+	if res == nil {
+		return false, fmt.Errorf("notification service returned no response")
+	}
 	return res.Success, nil
 }
 
 // Me is the resolver for the me field.
 func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
-	// Requires HTTP middleware to parse JWT and inject into context
-	userID, ok := ctx.Value("userID").(string)
-	if !ok || userID == "" {
-		return nil, fmt.Errorf("unauthorized")
+	// The HTTP auth middleware verifies the bearer token and injects the user ID.
+	userID, err := requireCurrentUserID(ctx)
+	if err != nil {
+		return nil, err
 	}
-
 	return r.User(ctx, userID)
 }
 
@@ -234,6 +394,9 @@ func (r *queryResolver) Post(ctx context.Context, id string) (*model.Post, error
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch post: %w", err)
 	}
+	if res == nil {
+		return nil, nil
+	}
 
 	post := &model.Post{
 		ID:        res.Id,
@@ -254,9 +417,15 @@ func (r *queryResolver) PostsByIds(ctx context.Context, ids []string) ([]*model.
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch posts: %w", err)
 	}
+	if res == nil {
+		return []*model.Post{}, nil
+	}
 
-	var posts []*model.Post
+	posts := make([]*model.Post, 0, len(res.Posts))
 	for _, p := range res.Posts {
+		if p == nil {
+			continue
+		}
 		posts = append(posts, &model.Post{
 			ID:        p.Id,
 			Content:   p.Content,
@@ -271,8 +440,23 @@ func (r *queryResolver) PostsByIds(ctx context.Context, ids []string) ([]*model.
 	return posts, nil
 }
 
+// Posts is currently unsupported by the Post service: the available gateway
+// client exposes GetPost and GetPostsByIds, but no list-all RPC. Return an
+// explicit error rather than silently pretending that the list is empty.
+func (r *queryResolver) Posts(ctx context.Context, limit *int32) ([]*model.Post, error) {
+	return nil, fmt.Errorf("posts query is unavailable: Post service does not expose a list-posts RPC")
+}
+
 // Feed is the resolver for the feed query.
 func (r *queryResolver) Feed(ctx context.Context, userID string, limit *int32, cursor *string) (*model.FeedResponse, error) {
+	authenticatedUserID, err := requireCurrentUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if authenticatedUserID != userID {
+		return nil, fmt.Errorf("forbidden: cannot read another user's feed")
+	}
+
 	reqLimit := int32(20)
 	if limit != nil {
 		reqLimit = *limit
@@ -285,19 +469,25 @@ func (r *queryResolver) Feed(ctx context.Context, userID string, limit *int32, c
 
 	// 1. Get the feed (which just contains Post IDs and Cursors)
 	// Give me the next 20 Post IDs for User A
+	if reqLimit < 1 || reqLimit > 100 {
+		return nil, fmt.Errorf("limit must be between 1 and 100")
+	}
 	feedRes, err := r.FeedClient.GetFeed(ctx, &feedpb.GetFeedRequest{
 		UserId: userID,
 		Limit:  reqLimit,
 		Cursor: reqCursor,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to fetch feed: %w", err)
+	}
+	if feedRes == nil {
+		return &model.FeedResponse{Items: []*model.FeedItem{}}, nil
 	}
 
 	// 2. Extract all the Post IDs to fetch them in a single batch
 	var postIDs []string
 	for _, item := range feedRes.Items {
-		if item.PostId != "" {
+		if item != nil && item.PostId != "" {
 			postIDs = append(postIDs, item.PostId)
 		}
 	}
@@ -309,10 +499,13 @@ func (r *queryResolver) Feed(ctx context.Context, userID string, limit *int32, c
 		if err != nil {
 			// You can choose to return an error here, or just log it and return partial data (null posts)
 			log.Printf("api-gateway: failed to fetch posts for feed user_id=%s: %v", userID, err)
-		} else {
+		} else if postsRes != nil {
 			posts := make([]*model.Post, 0, len(postsRes.Posts))
 			// Create a map for quick lookup by ID
 			for _, p := range postsRes.Posts {
+				if p == nil {
+					continue
+				}
 				post := &model.Post{
 					ID:        p.Id,
 					Content:   p.Content,
@@ -330,8 +523,11 @@ func (r *queryResolver) Feed(ctx context.Context, userID string, limit *int32, c
 	}
 
 	// 4. Stitch the Feed items and the Posts together
-	var items []*model.FeedItem
+	items := make([]*model.FeedItem, 0, len(feedRes.Items))
 	for _, item := range feedRes.Items {
+		if item == nil {
+			continue
+		}
 		items = append(items, &model.FeedItem{
 			PostID: item.PostId,
 			Cursor: item.Cursor,
@@ -339,73 +535,88 @@ func (r *queryResolver) Feed(ctx context.Context, userID string, limit *int32, c
 		})
 	}
 
-	return &model.FeedResponse{Items: items}, nil
+	return &model.FeedResponse{
+		Items:      items,
+		NextCursor: optionalString(feedRes.NextCursor),
+	}, nil
+
 }
 
 // Notifications is the resolver for the notifications field.
-func (r *queryResolver) Notifications(ctx context.Context, userID string, limit *int32) ([]*model.Notification, error) {
+func (r *queryResolver) Notifications(
+	ctx context.Context,
+	userID string,
+	limit *int32,
+) ([]*model.Notification, error) {
 	reqLimit := int32(20)
 	if limit != nil {
 		reqLimit = *limit
 	}
 
-	res, err := r.NotificationClient.GetNotifications(ctx, &notificationpb.GetNotificationsRequest{
-		UserId: userID,
-		Limit:  reqLimit,
-	})
+	if reqLimit < 1 || reqLimit > 100 {
+		return nil, fmt.Errorf("limit must be between 1 and 100")
+	}
+	authenticatedUserID, err := requireCurrentUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if authenticatedUserID != userID {
+		return nil, fmt.Errorf("forbidden: cannot read another user's notifications")
+	}
+
+	res, err := r.NotificationClient.GetNotifications(
+		ctx,
+		&notificationpb.GetNotificationsRequest{
+			UserId: userID,
+			Limit:  reqLimit,
+		},
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch notifications: %w", err)
 	}
 
-	var notifications []*model.Notification
+	if res == nil {
+		return []*model.Notification{}, nil
+	}
+
+	notifications := make([]*model.Notification, 0, len(res.Notifications))
+
 	for _, n := range res.Notifications {
+		if n == nil {
+			continue
+		}
+
 		notifications = append(notifications, &model.Notification{
 			ID:        n.Id,
+			UserID:    n.UserId,
 			Type:      n.Type,
 			ActorID:   n.ActorId,
+			EntityID:  optionalString(n.EntityId),
 			CreatedAt: n.CreatedAt,
 			Read:      n.Read,
 		})
 	}
+
 	return notifications, nil
 }
 
 // Recommendations is the resolver for the recommendations field.
 func (r *queryResolver) Recommendations(ctx context.Context) ([]*model.User, error) {
-	currentUserID := currentUserIDFromContext(ctx)
-	candidateIDs := []string{"user-1", "user-2", "user-3"}
-
-	usersByID, err := r.loadUsersByID(ctx, candidateIDs)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load recommendation candidates: %w", err)
+	if _, err := requireCurrentUserID(ctx); err != nil {
+		return nil, err
 	}
-
-	recommendations := make([]*model.User, 0, len(candidateIDs))
-	for _, candidateID := range candidateIDs {
-		if candidateID == currentUserID {
-			continue
-		}
-		user := usersByID[candidateID]
-		if user == nil {
-			continue
-		}
-
-		isFollowing, err := r.ConnectionClient.IsFollowing(ctx, &connpb.IsFollowingRequest{
-			FollowerId: currentUserID,
-			FolloweeId: candidateID,
-		})
-		if err == nil && isFollowing.IsFollowing {
-			continue
-		}
-
-		recommendations = append(recommendations, user)
-	}
-
-	return recommendations, nil
+	return nil, fmt.Errorf("recommendations are unavailable: Connection service does not expose a recommendation-list RPC")
 }
 
 // NotificationReceived is the resolver for the notificationReceived field.
 func (r *subscriptionResolver) NotificationReceived(ctx context.Context, userID string) (<-chan *model.Notification, error) {
+	authenticatedUserID, err := requireCurrentUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if authenticatedUserID != userID {
+		return nil, fmt.Errorf("forbidden: cannot subscribe to another user's notifications")
+	}
 	return nil, fmt.Errorf("subscriptions are not enabled")
 }
 
@@ -421,6 +632,57 @@ func (r *Resolver) Subscription() SubscriptionResolver { return &subscriptionRes
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type subscriptionResolver struct{ *Resolver }
+
+// FollowUser follows the specified user.
+func (r *mutationResolver) FollowUser(
+	ctx context.Context,
+	userID string,
+) (*model.ConnectResponse, error) {
+	followerID := currentUserIDFromContext(ctx)
+	if followerID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+	if followerID == userID {
+		return nil, fmt.Errorf("cannot follow yourself")
+	}
+
+	res, err := r.ConnectionClient.FollowUser(ctx, &connpb.FollowUserRequest{
+		FollowerId: followerID,
+		FolloweeId: userID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to follow user: %w", err)
+	}
+	if res == nil {
+		return nil, fmt.Errorf("connection service returned no response")
+	}
+
+	return &model.ConnectResponse{Success: res.Success}, nil
+}
+
+// UnfollowUser unfollows the specified user.
+func (r *mutationResolver) UnfollowUser(
+	ctx context.Context,
+	userID string,
+) (*model.ConnectResponse, error) {
+	followerID := currentUserIDFromContext(ctx)
+	if followerID == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	res, err := r.ConnectionClient.UnfollowUser(ctx, &connpb.UnfollowUserRequest{
+		FollowerId: followerID,
+		FolloweeId: userID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to unfollow user: %w", err)
+	}
+	if res == nil {
+		return nil, fmt.Errorf("connection service returned no response")
+	}
+
+	return &model.ConnectResponse{Success: res.Success}, nil
+}
 
 // !!! WARNING !!!
 // The code below was going to be deleted when updating resolvers. It has been copied here so you have
