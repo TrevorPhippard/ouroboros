@@ -1,26 +1,39 @@
 import { useQuery } from "@tanstack/react-query"
-import { ProfileType } from "../schemas"
 import { gqlRequest } from "@/services/graphql/client"
-import { GET_PROFILE } from "@/lib/queries"
+import { GET_PROFILE } from "../api/profileQueries"
+import type { ProfileViewModel, UserProfileData } from "../schemas"
+
+type GetProfileResponse = {
+  user: UserProfileData | null
+}
 
 export const useProfile = (userId: string) => {
-  return useQuery<ProfileType>({
+  return useQuery<ProfileViewModel, Error>({
     queryKey: ["profile", userId],
+    enabled: Boolean(userId),
     queryFn: async () => {
-      const response = await gqlRequest({
+      const response = (await gqlRequest({
         query: GET_PROFILE,
-        variables: { userId },
-      })
+        variables: { id: userId },
+      })) as GetProfileResponse
 
       const user = response.user
+      if (!user) throw new Error("Profile not found")
+
       return {
         id: user.id,
-        name: user.displayName ?? user.username,
-        avatarUrl: user.avatarUrl ?? undefined,
-        headline: user.bio ?? "Add a short professional headline",
-        about: user.bio ?? "",
-        followersCount: user.followersCount ?? 0,
-        followingCount: user.followingCount ?? 0,
+        userId: user.id,
+        username: user.username,
+        displayName: user.displayName,
+        avatarUrl: user.avatarUrl,
+        bio: user.bio,
+        followersCount: user.followersCount,
+        followingCount: user.followingCount,
+        isFollowing: user.isFollowing,
+        // These fields belong to GraphQL `Profile`, but the supplied schema
+        // does not expose a query that can read a Profile.
+        headline: null,
+        about: null,
         experiences: [],
       }
     },

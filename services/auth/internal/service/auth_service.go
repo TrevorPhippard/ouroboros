@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -159,6 +160,7 @@ func (s *Service) SignIn(
 		return nil, status.Error(codes.Internal, "failed to generate token")
 	}
 
+	fmt.Println(user)
 	return &pb.AuthResponse{
 		Token: token,
 		User: &pb.User{

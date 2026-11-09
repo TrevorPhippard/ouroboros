@@ -1,58 +1,99 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { ProfileType } from "../schemas"
 import { gqlRequest } from "@/services/graphql/client"
-import { UPDATE_PROFILE } from "@/lib/queries"
+import { UPDATE_PROFILE } from "../api/profileQueries"
 import { useAuthStore } from "@/store/useAuthStore"
+import type {
+  ProfileType,
+  ProfileUpdateInput,
+  ProfileViewModel,
+} from "../schemas"
 
-export const useUpdateProfile = () => {
-  const userId = useAuthStore((state) => state.user?.id ?? "user-1")
+type UpdateProfileResponse = {
+  updateProfile: ProfileType
+}
+
+const toGraphQLInput = (updates: ProfileUpdateInput): ProfileUpdateInput => {
+  const input: ProfileUpdateInput = {}
+  const fields: (keyof ProfileUpdateInput)[] = [
+    "headline",
+    "about",
+    "displayName",
+    "avatarUrl",
+    "bio",
+  ]
+
+  for (const field of fields) {
+    const value = updates[field]
+    if (value !== undefined) input[field] = value
+  }
+
+  return input
+}
+
+export const useUpdateProfile = (profileUserId?: string) => {
+  const authenticatedUserId = useAuthStore((state) => state.user?.id)
+  const userId = profileUserId ?? authenticatedUserId
   const queryClient = useQueryClient()
+  const queryKey = ["profile", userId]
 
-  return useMutation({
-    mutationFn: (newProfile: Partial<ProfileType>) =>
-      gqlRequest({
+  return useMutation<ProfileType, Error, ProfileUpdateInput, { previousProfile?: ProfileViewModel }>({
+    mutationFn: async (updates) => {
+      if (!userId) throw new Error("You must be signed in to update a profile.")
+
+      const input = toGraphQLInput(updates)
+      if (Object.keys(input).length === 0) {
+        throw new Error("There are no profile changes to save.")
+      }
+
+      const response = (await gqlRequest({
         query: UPDATE_PROFILE,
-        variables: {
-          userId,
-          input: {
-            name: newProfile.name,
-            headline: newProfile.displayName,
-            about: newProfile.about,
-            avatarUrl: newProfile.avatarUrl,
-          },
-        },
-      }),
+        variables: { userId, input },
+      })) as UpdateProfileResponse
 
-    onMutate: async (newProfile: Partial<ProfileType>) => {
-      await queryClient.cancelQueries({
-        queryKey: ["profile", userId],
-      })
+      if (!response?.updateProfile) {
+        throw new Error("The profile update did not return a profile.")
+      }
 
-      const previousProfile = queryClient.getQueryData<ProfileType>([
-        "profile",
-        userId,
-      ])
+      return response.updateProfile
+    },
+
+    onMutate: async (updates) => {
+      await queryClient.cancelQueries({ queryKey })
+      const previousProfile = queryClient.getQueryData<ProfileViewModel>(queryKey)
 
       if (previousProfile) {
-        queryClient.setQueryData<ProfileType>(["profile", userId], {
+        queryClient.setQueryData<ProfileViewModel>(queryKey, {
           ...previousProfile,
-          ...newProfile,
+          ...updates,
         })
       }
 
       return { previousProfile }
     },
 
-    onError: (_error, _newProfile, context) => {
-      if (context?.previousProfile) {
-        queryClient.setQueryData(["profile", userId], context.previousProfile)
-      }
+    onSuccess: (updatedProfile) => {
+      // Merge the mutation's full Profile response into the cached User view.
+      // Do not invalidate immediately: the provided schema cannot query Profile
+      // fields such as headline/about, so a refetch would erase those values.
+      queryClient.setQueryData<ProfileViewModel>(queryKey, (previousProfile) => {
+        if (!previousProfile) return previousProfile
+        return {
+          ...previousProfile,
+          ...updatedProfile,
+          id: previousProfile.id,
+          userId: previousProfile.userId,
+          username: previousProfile.username,
+          followersCount: previousProfile.followersCount,
+          followingCount: previousProfile.followingCount,
+          isFollowing: previousProfile.isFollowing,
+        }
+      })
     },
 
-    onSettled: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["profile", userId],
-      })
+    onError: (_error, _updates, context) => {
+      if (context?.previousProfile) {
+        queryClient.setQueryData(queryKey, context.previousProfile)
+      }
     },
   })
 }

@@ -1,32 +1,33 @@
-// src/features/profile/api/profileApi.ts
-import { Profile } from "../schemas"
+// Optional in-memory mock used for isolated UI development. Production hooks
+// use the schema-valid GraphQL operations in `profileQueries.ts`.
+import type { ProfileType, ProfileUpdateInput } from "../schemas"
 
-// 1. In-Memory Mock Database
-// This persists state during your development session so updates actually reflect in the UI.
-const mockProfileDb: Record<string, Profile> = {
+const mockProfileDb: Record<string, ProfileType> = {
   "user-123": {
-    id: "user-123",
+    id: "profile-123",
+    userId: "user-123",
+    displayName: "Morgan Lee",
+    avatarUrl: null,
     headline: "Senior Web Developer",
-    about:
-      "Specializing in clean architecture, React ecosystems, and scalable event-driven systems.",
+    about: "Specializing in clean architecture and scalable web applications.",
+    bio: "Specializing in clean architecture and scalable web applications.",
     experiences: [
       {
         id: "exp-1",
         title: "Frontend Architect",
         company: "Tech Innovations Inc.",
         startDate: "2023-01",
+        endDate: null,
+        description: "Led frontend architecture and component-system development.",
       },
     ],
   },
 }
 
-// Network latency simulator
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-// 2. The Fetcher Contracts
-
-export const getProfileApi = async (userId: string): Promise<Profile> => {
-  await delay(800) // Simulate an 800ms API gateway response
+export const getProfileApi = async (userId: string): Promise<ProfileType> => {
+  await delay(800)
 
   const profile = mockProfileDb[userId]
   if (!profile) throw new Error("Profile not found")
@@ -36,19 +37,14 @@ export const getProfileApi = async (userId: string): Promise<Profile> => {
 
 export const updateProfileApi = async (
   userId: string,
-  updates: Partial<Profile> = {}
-): Promise<Profile> => {
-  await delay(1000) // Simulate mutation latency
-  console.log("Received profile update:", updates)
-  // Optional: Uncomment the next line to test your optimistic UI rollbacks!
-  // if (Math.random() > 0.5) throw new Error("Simulated 500 Internal Server Error");
+  updates: ProfileUpdateInput = {},
+): Promise<ProfileType> => {
+  await delay(1000)
 
   const existingProfile = mockProfileDb[userId]
   if (!existingProfile) throw new Error("Profile not found")
 
-  // Merge updates
-  const updatedProfile = { ...existingProfile, ...updates }
+  const updatedProfile: ProfileType = { ...existingProfile, ...updates }
   mockProfileDb[userId] = updatedProfile
-
   return updatedProfile
 }

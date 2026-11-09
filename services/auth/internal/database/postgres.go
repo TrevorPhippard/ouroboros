@@ -49,13 +49,13 @@ func SeedDB(db *gorm.DB) {
 		{
 			ID:           "user-1",
 			Email:        "user1@example.com",
-			PasswordHash: "user1",
+			PasswordHash: "user1user1",
 			DisplayName:  "User One",
 		},
 		{
 			ID:           "user-2",
 			Email:        "user2@example.com",
-			PasswordHash: "user2",
+			PasswordHash: "user2user2",
 			DisplayName:  "User Two",
 		},
 	}
