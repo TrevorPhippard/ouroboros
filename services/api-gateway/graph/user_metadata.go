@@ -2,6 +2,7 @@ package graph
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"strings"
 
@@ -22,9 +23,15 @@ func (r *Resolver) loadUsersByID(ctx context.Context, ids []string) (map[string]
 	if err != nil {
 		return nil, err
 	}
+	if authRes == nil {
+		return nil, fmt.Errorf("auth service returned an empty user response")
+	}
 
 	users := make(map[string]*model.User, len(authRes.Users))
 	for _, user := range authRes.Users {
+		if user == nil || strings.TrimSpace(user.Id) == "" {
+			continue
+		}
 		users[user.Id] = &model.User{
 			ID:          user.Id,
 			Email:       user.Email,
@@ -41,15 +48,21 @@ func (r *Resolver) loadUsersByID(ctx context.Context, ids []string) (map[string]
 		log.Printf("api-gateway: failed to batch load profiles for %d users: %v", len(uniqueIDs), err)
 		return users, nil
 	}
+	if profileRes == nil {
+		log.Printf("api-gateway: profile service returned an empty response for %d users", len(uniqueIDs))
+		return users, nil
+	}
 
 	for _, profile := range profileRes.Profiles {
+		if profile == nil || strings.TrimSpace(profile.UserId) == "" {
+			continue
+		}
+		// User.email and User.username are non-null fields in the GraphQL
+		// schema, so do not synthesize a partial User when the auth service
+		// has no corresponding account record.
 		user := users[profile.UserId]
 		if user == nil {
-			user = &model.User{
-				ID:    profile.UserId,
-				Posts: []*model.Post{},
-			}
-			users[profile.UserId] = user
+			continue
 		}
 
 		if profile.DisplayName != "" {
@@ -70,12 +83,12 @@ func (r *Resolver) loadUsersByID(ctx context.Context, ids []string) (map[string]
 		}
 
 		followersCount, err := r.ConnectionClient.GetFollowersCount(ctx, &connpb.UserRequest{UserId: user.ID})
-		if err == nil {
+		if err == nil && followersCount != nil {
 			user.FollowersCount = followersCount.Count
 		}
 
 		followingCount, err := r.ConnectionClient.GetFollowingCount(ctx, &connpb.UserRequest{UserId: user.ID})
-		if err == nil {
+		if err == nil && followingCount != nil {
 			user.FollowingCount = followingCount.Count
 		}
 
@@ -84,7 +97,7 @@ func (r *Resolver) loadUsersByID(ctx context.Context, ids []string) (map[string]
 				FollowerId: currentUserID,
 				FolloweeId: user.ID,
 			})
-			if err == nil {
+			if err == nil && isFollowing != nil {
 				user.IsFollowing = isFollowing.IsFollowing
 			}
 		}
@@ -114,7 +127,11 @@ func (r *Resolver) attachAuthorsToPosts(ctx context.Context, posts []*model.Post
 		if post == nil {
 			continue
 		}
-		post.Author = usersByID[post.AuthorID]
+		author := usersByID[post.AuthorID]
+		if author == nil {
+			return fmt.Errorf("author %q was not found", post.AuthorID)
+		}
+		post.Author = author
 	}
 
 	return nil
@@ -149,9 +166,32 @@ func nonNilComments(comments []*model.Comment) []*model.Comment {
 	return comments
 }
 
+type userIDContextKey struct{}
+
+// WithUserID adds an identity that has already been authenticated by trusted
+// middleware. Callers must not populate it directly from an arbitrary request
+// header or query parameter.
+func WithUserID(ctx context.Context, userID string) context.Context {
+	return context.WithValue(ctx, userIDContextKey{}, strings.TrimSpace(userID))
+}
+
+// currentUserIDFromContext returns only an identity established by trusted
+// authentication middleware. Never synthesize a fallback identity: doing so
+// lets unauthenticated requests act as a real user.
 func currentUserIDFromContext(ctx context.Context) string {
-	if userID, ok := ctx.Value("userID").(string); ok && strings.TrimSpace(userID) != "" {
-		return userID
+	if ctx == nil {
+		return ""
 	}
-	return "user-1"
+	if userID, ok := ctx.Value(userIDContextKey{}).(string); ok {
+		return strings.TrimSpace(userID)
+	}
+	return ""
+}
+
+func requireCurrentUserID(ctx context.Context) (string, error) {
+	userID := currentUserIDFromContext(ctx)
+	if userID == "" {
+		return "", fmt.Errorf("unauthorized")
+	}
+	return userID, nil
 }

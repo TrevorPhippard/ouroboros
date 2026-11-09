@@ -1,7 +1,7 @@
 package database
 
 import (
-	"auth/internal/auth"
+	auth "auth/internal/domain"
 	"log"
 	"time"
 

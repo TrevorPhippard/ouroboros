@@ -82,6 +82,7 @@ Environment variables configured: Set all required environment variables
 ## Quick Start
 
 ```bash
+./app/web/ npm i
 docker-compose up --build
 ```
 
@@ -287,4 +288,3 @@ accessed 17 April 2026.
 
 'The echo chamber effect on social media', Proceedings of the National Academy of Sciences (2021) <https://pmc.ncbi.nlm.nih.gov/articles/PMC7936330/>
 accessed 17 April 2026.
-

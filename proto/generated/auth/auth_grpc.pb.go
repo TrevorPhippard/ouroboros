@@ -29,10 +29,6 @@ const (
 // AuthServiceClient is the client API for AuthService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-//
-// =========================
-// SERVICE
-// =========================
 type AuthServiceClient interface {
 	// Auth lifecycle
 	SignUp(ctx context.Context, in *SignUpRequest, opts ...grpc.CallOption) (*AuthResponse, error)
@@ -104,10 +100,6 @@ func (c *authServiceClient) GetUsersByIds(ctx context.Context, in *GetUsersByIds
 // AuthServiceServer is the server API for AuthService service.
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
-//
-// =========================
-// SERVICE
-// =========================
 type AuthServiceServer interface {
 	// Auth lifecycle
 	SignUp(context.Context, *SignUpRequest) (*AuthResponse, error)

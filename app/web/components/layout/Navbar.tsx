@@ -6,6 +6,7 @@ import { useAuthStore } from "@/store/useAuthStore"
 import { Home, Users, Bell, Search, ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { SignOutButton } from "@/features/auth/components/SignOutButton"
+import { profile } from "console"
 
 export const Navbar = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
@@ -16,9 +17,9 @@ export const Navbar = () => {
 
   const navItems = [
     { icon: Home, label: "Home", href: "/feed" },
-    { icon: Users, label: "register", href: "/register" },
-    { icon: Users, label: "login", href: "/login" },
     { icon: Users, label: "profile", href: "/profile" },
+    // { icon: Users, label: "register", href: "/register" },
+    // { icon: Users, label: "login", href: "/login" },
     {
       icon: Bell,
       label: "Notifications",
@@ -32,7 +33,8 @@ export const Navbar = () => {
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
         {/* Left: Logo & Search */}
         <div className="flex flex-1 items-center gap-2">
-          <div className="rounded bg-[#494453] p-1 text-xl leading-none font-bold text-white">
+          <img src="/mini.svg" alt="ourobous icon" width={30} height={30} />
+          <div className="rounded p-1 text-xl leading-none font-bold">
             οὐροβόρος
           </div>
           <div className="relative hidden w-full max-w-xs md:block">
@@ -77,7 +79,7 @@ export const Navbar = () => {
               <img
                 src={
                   user?.avatarUrl ||
-                  "https://avatars.githubusercontent.com/u/8942758?v=4"
+                  `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.id}`
                 }
                 alt="Profile"
                 className="h-6 w-6 rounded-full border border-gray-200"
@@ -93,10 +95,14 @@ export const Navbar = () => {
               <div className="absolute right-0 mt-2 w-64 overflow-hidden rounded-lg border border-gray-200 bg-white py-2 shadow-xl">
                 <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2">
                   <img
-                    src={user?.avatarUrl}
+                    src={
+                      user?.avatarUrl ||
+                      `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.id}`
+                    }
                     className="h-12 w-12 rounded-full"
                     alt=""
                   />
+
                   <div>
                     <p className="text-sm font-semibold">
                       {user?.displayName ?? "User"}

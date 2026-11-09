@@ -1,43 +1,44 @@
-
 <svg
   width="200"
   height="200"
-  viewBox="0 0 200 200"
+  viewBox="-5 -5 210 210"
   xmlns="http://www.w3.org/2000/svg"
 >
-  <!-- Black half -->
-  <path
-    d="M 100 20 A 80 80 0 0 0 100 180"
-    fill="none"
-    stroke="black"
-    stroke-width="28"
-  />
+  <g transform="rotate(90 100 100)">
+    <!-- Black half -->
+    <path
+      d="M 100 20 A 80 80 0 0 0 100 180"
+      fill="none"
+      stroke="black"
+      stroke-width="40"
+    />
 
-  <!-- White half -->
-  <path
-    d="M 100 180 A 80 80 0 0 0 100 20"
-    fill="none"
-    stroke="white"
-    stroke-width="28"
-  />
+    <!-- White half -->
+    <path
+      d="M 100 180 A 80 80 0 0 0 100 20"
+      fill="none"
+      stroke="white"
+      stroke-width="40"
+    />
 
-  <!-- Outer black outline -->
-  <circle
-    cx="100"
-    cy="100"
-    r="94"
-    fill="none"
-    stroke="black"
-    stroke-width="1.5"
-  />
+    <!-- Outer black outline (unchanged) -->
+    <circle
+      cx="100"
+      cy="100"
+      r="100"
+      fill="none"
+      stroke="black"
+      stroke-width="4.5"
+    />
 
-  <!-- Inner black outline -->
-  <circle
-    cx="100"
-    cy="100"
-    r="66"
-    fill="none"
-    stroke="black"
-    stroke-width="1.5"
-  />
+    <!-- Inner black outline (unchanged) -->
+    <circle
+      cx="100"
+      cy="100"
+      r="60"
+      fill="none"
+      stroke="black"
+      stroke-width="4.5"
+    />
+  </g>
 </svg>
