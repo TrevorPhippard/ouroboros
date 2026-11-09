@@ -2,10 +2,12 @@
 
 import { useState } from "react"
 import { useUpdateProfile } from "../hooks/useUpdateProfile"
+import type { ProfileUpdateInput } from "../schemas"
 
 type EditableFieldProps = {
   label: string
-  field: "name" | "headline" | "about"
+  field: keyof ProfileUpdateInput
+  userId?: string
   initialValue?: string | null
   multiline?: boolean
   placeholder?: string
@@ -14,24 +16,28 @@ type EditableFieldProps = {
 export const EditableField = ({
   label,
   field,
+  userId,
   initialValue,
   multiline = false,
   placeholder,
 }: EditableFieldProps) => {
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState("")
-  const { mutateAsync, isPending } = useUpdateProfile()
+  const [saveError, setSaveError] = useState("")
+  const { mutateAsync, isPending } = useUpdateProfile(userId)
 
   const displayValue = initialValue ?? ""
 
   const handleEdit = () => {
     setDraft(displayValue)
+    setSaveError("")
     setIsEditing(true)
   }
 
   const handleCancel = () => {
     setIsEditing(false)
     setDraft("")
+    setSaveError("")
   }
 
   const handleSave = async () => {
@@ -41,11 +47,13 @@ export const EditableField = ({
     }
 
     try {
-      await mutateAsync({ [field]: draft })
+      const updates = { [field]: draft } as ProfileUpdateInput
+      await mutateAsync(updates)
       setIsEditing(false)
       setDraft("")
-    } catch {
-      // Keep the editor open so the user can retry.
+      setSaveError("")
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Could not save this field.")
     }
   }
 
@@ -87,6 +95,8 @@ export const EditableField = ({
             />
           )}
 
+          {saveError && <p role="alert" className="text-sm text-red-600">{saveError}</p>}
+
           <div className="flex gap-2">
             <button
               type="button"
@@ -108,10 +118,7 @@ export const EditableField = ({
           </div>
         </div>
       ) : (
-        <div
-          className="cursor-pointer break-words whitespace-pre-wrap text-gray-800"
-          onClick={handleEdit}
-        >
+        <div className="break-words whitespace-pre-wrap text-gray-800">
           {displayValue || (
             <span className="text-gray-400">
               {placeholder ?? `Add ${label.toLowerCase()}...`}
