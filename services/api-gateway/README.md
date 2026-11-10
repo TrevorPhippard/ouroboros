@@ -44,3 +44,30 @@ go run ./cmd
 The gateway schema exposes `Query.posts`, but the available post client calls in this project only show `GetPost` and `GetPostsByIds`. The resolver therefore returns an explicit error until the Post service provides a list-posts RPC. The nested `User.posts` and `Post.comments` fields also need real list RPCs to return data; they currently default to empty lists. `recommendations` and notification subscriptions are not implemented by the current downstream service interfaces. Connect these fields to real backend RPCs before clients depend on them.
 
 The gateway was source-checked with `gofmt`. A complete build/test could not be run in this environment: the declared Go 1.25.8 toolchain was not available locally and toolchain downloads are blocked, and this archive omits the imported generated protobuf packages.
+
+
+
+
+## Playground Examples
+```
+mutation signIn($input: SignInInput!) {
+  signIn(input: $input) {
+    token
+    user {
+      id
+      email
+      username
+      displayName
+    }
+  }
+}
+
+
+{
+  "input": {
+    "email": "user1@example.com",
+    "password": "user1user1"
+  }
+}
+```
+
