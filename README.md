@@ -36,6 +36,9 @@
 
 Ouroboros is a modern social platform designed to remove algorithmic manipulation and bring back intentional, human-centered interaction.
 
+## Not implemented at all but would like to still call out
+Dataloader + Outbox pattern for EDA
+
 ---
 
 ## Why This Exists
