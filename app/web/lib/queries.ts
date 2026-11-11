@@ -110,9 +110,13 @@ export const SEND_CONNECT = gql`
 export const SIGN_UP = gql`
   mutation SignUp($input: SignUpInput!) {
     signUp(input: $input) {
-      id
-      displayName
-      email
+      token
+      user {
+        id
+        email
+        username
+        displayName
+      }
     }
   }
 `
