@@ -22,7 +22,7 @@ const (
 	PostService_CreatePost_FullMethodName          = "/post.PostService/CreatePost"
 	PostService_GetPost_FullMethodName             = "/post.PostService/GetPost"
 	PostService_GetPostsByIds_FullMethodName       = "/post.PostService/GetPostsByIds"
-	PostService_GetPostsByAuthorId_FullMethodName  = "/post.PostService/GetPostsByAuthorId"
+	PostService_GetPostsByUserId_FullMethodName    = "/post.PostService/GetPostsByUserId"
 	PostService_CreateComment_FullMethodName       = "/post.PostService/CreateComment"
 	PostService_GetCommentsByPostId_FullMethodName = "/post.PostService/GetCommentsByPostId"
 	PostService_LikePost_FullMethodName            = "/post.PostService/LikePost"
@@ -35,7 +35,7 @@ type PostServiceClient interface {
 	CreatePost(ctx context.Context, in *CreatePostRequest, opts ...grpc.CallOption) (*Post, error)
 	GetPost(ctx context.Context, in *GetPostRequest, opts ...grpc.CallOption) (*Post, error)
 	GetPostsByIds(ctx context.Context, in *GetPostsByIdsRequest, opts ...grpc.CallOption) (*GetPostsByIdsResponse, error)
-	GetPostsByAuthorId(ctx context.Context, in *GetPostsByAuthorIdRequest, opts ...grpc.CallOption) (*GetPostsByAuthorIdResponse, error)
+	GetPostsByUserId(ctx context.Context, in *GetPostsByUserIdRequest, opts ...grpc.CallOption) (*GetPostsByUserIdResponse, error)
 	CreateComment(ctx context.Context, in *CreateCommentRequest, opts ...grpc.CallOption) (*Comment, error)
 	GetCommentsByPostId(ctx context.Context, in *GetCommentsRequest, opts ...grpc.CallOption) (*GetCommentsResponse, error)
 	LikePost(ctx context.Context, in *LikePostRequest, opts ...grpc.CallOption) (*LikePostResponse, error)
@@ -79,10 +79,10 @@ func (c *postServiceClient) GetPostsByIds(ctx context.Context, in *GetPostsByIds
 	return out, nil
 }
 
-func (c *postServiceClient) GetPostsByAuthorId(ctx context.Context, in *GetPostsByAuthorIdRequest, opts ...grpc.CallOption) (*GetPostsByAuthorIdResponse, error) {
+func (c *postServiceClient) GetPostsByUserId(ctx context.Context, in *GetPostsByUserIdRequest, opts ...grpc.CallOption) (*GetPostsByUserIdResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetPostsByAuthorIdResponse)
-	err := c.cc.Invoke(ctx, PostService_GetPostsByAuthorId_FullMethodName, in, out, cOpts...)
+	out := new(GetPostsByUserIdResponse)
+	err := c.cc.Invoke(ctx, PostService_GetPostsByUserId_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +126,7 @@ type PostServiceServer interface {
 	CreatePost(context.Context, *CreatePostRequest) (*Post, error)
 	GetPost(context.Context, *GetPostRequest) (*Post, error)
 	GetPostsByIds(context.Context, *GetPostsByIdsRequest) (*GetPostsByIdsResponse, error)
-	GetPostsByAuthorId(context.Context, *GetPostsByAuthorIdRequest) (*GetPostsByAuthorIdResponse, error)
+	GetPostsByUserId(context.Context, *GetPostsByUserIdRequest) (*GetPostsByUserIdResponse, error)
 	CreateComment(context.Context, *CreateCommentRequest) (*Comment, error)
 	GetCommentsByPostId(context.Context, *GetCommentsRequest) (*GetCommentsResponse, error)
 	LikePost(context.Context, *LikePostRequest) (*LikePostResponse, error)
@@ -149,8 +149,8 @@ func (UnimplementedPostServiceServer) GetPost(context.Context, *GetPostRequest) 
 func (UnimplementedPostServiceServer) GetPostsByIds(context.Context, *GetPostsByIdsRequest) (*GetPostsByIdsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPostsByIds not implemented")
 }
-func (UnimplementedPostServiceServer) GetPostsByAuthorId(context.Context, *GetPostsByAuthorIdRequest) (*GetPostsByAuthorIdResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetPostsByAuthorId not implemented")
+func (UnimplementedPostServiceServer) GetPostsByUserId(context.Context, *GetPostsByUserIdRequest) (*GetPostsByUserIdResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPostsByUserId not implemented")
 }
 func (UnimplementedPostServiceServer) CreateComment(context.Context, *CreateCommentRequest) (*Comment, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateComment not implemented")
@@ -236,20 +236,20 @@ func _PostService_GetPostsByIds_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
-func _PostService_GetPostsByAuthorId_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetPostsByAuthorIdRequest)
+func _PostService_GetPostsByUserId_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPostsByUserIdRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(PostServiceServer).GetPostsByAuthorId(ctx, in)
+		return srv.(PostServiceServer).GetPostsByUserId(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: PostService_GetPostsByAuthorId_FullMethodName,
+		FullMethod: PostService_GetPostsByUserId_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(PostServiceServer).GetPostsByAuthorId(ctx, req.(*GetPostsByAuthorIdRequest))
+		return srv.(PostServiceServer).GetPostsByUserId(ctx, req.(*GetPostsByUserIdRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -328,8 +328,8 @@ var PostService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _PostService_GetPostsByIds_Handler,
 		},
 		{
-			MethodName: "GetPostsByAuthorId",
-			Handler:    _PostService_GetPostsByAuthorId_Handler,
+			MethodName: "GetPostsByUserId",
+			Handler:    _PostService_GetPostsByUserId_Handler,
 		},
 		{
 			MethodName: "CreateComment",

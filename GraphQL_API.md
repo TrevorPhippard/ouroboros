@@ -67,7 +67,7 @@ mutation CreatePost($input: CreatePostInput!) {
     id
     content
     createdAt
-    authorId
+    UserId
   }
 }
 ```
@@ -80,7 +80,7 @@ mutation LikePost($postId: ID!) {
     id
     content
     createdAt
-    authorId
+    UserId
   }
 }
 ```

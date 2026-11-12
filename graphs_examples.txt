@@ -6,7 +6,7 @@ service PostService
   status:UNTESTED
   mutation CreateNewPost {
     createPost(input: {
-      authorId: "user_01",
+      UserId: "user_01",
       content: "Ouroboros is officially online! 🐍"
     }) {
       id

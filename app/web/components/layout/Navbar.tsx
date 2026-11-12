@@ -17,7 +17,7 @@ export const Navbar = () => {
 
   const navItems = [
     { icon: Home, label: "Home", href: "/feed" },
-    { icon: Users, label: "profile", href: "/profile" },
+    { icon: Users, label: "profile", href: `/profile/${user?.id}` },
     // { icon: Users, label: "register", href: "/register" },
     // { icon: Users, label: "login", href: "/login" },
     {

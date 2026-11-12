@@ -205,7 +205,7 @@ func (x *GetPostsByIdsResponse) GetPosts() []*Post {
 	return nil
 }
 
-type GetPostsByAuthorIdRequest struct {
+type GetPostsByUserIdRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AuthorId      string                 `protobuf:"bytes,1,opt,name=author_id,json=authorId,proto3" json:"author_id,omitempty"`
 	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
@@ -213,20 +213,20 @@ type GetPostsByAuthorIdRequest struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetPostsByAuthorIdRequest) Reset() {
-	*x = GetPostsByAuthorIdRequest{}
+func (x *GetPostsByUserIdRequest) Reset() {
+	*x = GetPostsByUserIdRequest{}
 	mi := &file_post_post_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetPostsByAuthorIdRequest) String() string {
+func (x *GetPostsByUserIdRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetPostsByAuthorIdRequest) ProtoMessage() {}
+func (*GetPostsByUserIdRequest) ProtoMessage() {}
 
-func (x *GetPostsByAuthorIdRequest) ProtoReflect() protoreflect.Message {
+func (x *GetPostsByUserIdRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_post_post_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -238,46 +238,46 @@ func (x *GetPostsByAuthorIdRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetPostsByAuthorIdRequest.ProtoReflect.Descriptor instead.
-func (*GetPostsByAuthorIdRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetPostsByUserIdRequest.ProtoReflect.Descriptor instead.
+func (*GetPostsByUserIdRequest) Descriptor() ([]byte, []int) {
 	return file_post_post_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *GetPostsByAuthorIdRequest) GetAuthorId() string {
+func (x *GetPostsByUserIdRequest) GetAuthorId() string {
 	if x != nil {
 		return x.AuthorId
 	}
 	return ""
 }
 
-func (x *GetPostsByAuthorIdRequest) GetLimit() int32 {
+func (x *GetPostsByUserIdRequest) GetLimit() int32 {
 	if x != nil {
 		return x.Limit
 	}
 	return 0
 }
 
-type GetPostsByAuthorIdResponse struct {
+type GetPostsByUserIdResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Posts         []*Post                `protobuf:"bytes,1,rep,name=posts,proto3" json:"posts,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetPostsByAuthorIdResponse) Reset() {
-	*x = GetPostsByAuthorIdResponse{}
+func (x *GetPostsByUserIdResponse) Reset() {
+	*x = GetPostsByUserIdResponse{}
 	mi := &file_post_post_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetPostsByAuthorIdResponse) String() string {
+func (x *GetPostsByUserIdResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetPostsByAuthorIdResponse) ProtoMessage() {}
+func (*GetPostsByUserIdResponse) ProtoMessage() {}
 
-func (x *GetPostsByAuthorIdResponse) ProtoReflect() protoreflect.Message {
+func (x *GetPostsByUserIdResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_post_post_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -289,12 +289,12 @@ func (x *GetPostsByAuthorIdResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetPostsByAuthorIdResponse.ProtoReflect.Descriptor instead.
-func (*GetPostsByAuthorIdResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetPostsByUserIdResponse.ProtoReflect.Descriptor instead.
+func (*GetPostsByUserIdResponse) Descriptor() ([]byte, []int) {
 	return file_post_post_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *GetPostsByAuthorIdResponse) GetPosts() []*Post {
+func (x *GetPostsByUserIdResponse) GetPosts() []*Post {
 	if x != nil {
 		return x.Posts
 	}
@@ -703,11 +703,11 @@ const file_post_post_proto_rawDesc = "" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\"9\n" +
 	"\x15GetPostsByIdsResponse\x12 \n" +
 	"\x05posts\x18\x01 \x03(\v2\n" +
-	".post.PostR\x05posts\"N\n" +
-	"\x19GetPostsByAuthorIdRequest\x12\x1b\n" +
+	".post.PostR\x05posts\"L\n" +
+	"\x17GetPostsByUserIdRequest\x12\x1b\n" +
 	"\tauthor_id\x18\x01 \x01(\tR\bauthorId\x12\x14\n" +
-	"\x05limit\x18\x02 \x01(\x05R\x05limit\">\n" +
-	"\x1aGetPostsByAuthorIdResponse\x12 \n" +
+	"\x05limit\x18\x02 \x01(\x05R\x05limit\"<\n" +
+	"\x18GetPostsByUserIdResponse\x12 \n" +
 	"\x05posts\x18\x01 \x03(\v2\n" +
 	".post.PostR\x05posts\"f\n" +
 	"\x14CreateCommentRequest\x12\x17\n" +
@@ -735,15 +735,15 @@ const file_post_post_proto_rawDesc = "" +
 	"\apost_id\x18\x01 \x01(\tR\x06postId\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\",\n" +
 	"\x10LikePostResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess2\xd3\x03\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess2\xcd\x03\n" +
 	"\vPostService\x121\n" +
 	"\n" +
 	"CreatePost\x12\x17.post.CreatePostRequest\x1a\n" +
 	".post.Post\x12+\n" +
 	"\aGetPost\x12\x14.post.GetPostRequest\x1a\n" +
 	".post.Post\x12H\n" +
-	"\rGetPostsByIds\x12\x1a.post.GetPostsByIdsRequest\x1a\x1b.post.GetPostsByIdsResponse\x12W\n" +
-	"\x12GetPostsByAuthorId\x12\x1f.post.GetPostsByAuthorIdRequest\x1a .post.GetPostsByAuthorIdResponse\x12:\n" +
+	"\rGetPostsByIds\x12\x1a.post.GetPostsByIdsRequest\x1a\x1b.post.GetPostsByIdsResponse\x12Q\n" +
+	"\x10GetPostsByUserId\x12\x1d.post.GetPostsByUserIdRequest\x1a\x1e.post.GetPostsByUserIdResponse\x12:\n" +
 	"\rCreateComment\x12\x1a.post.CreateCommentRequest\x1a\r.post.Comment\x12J\n" +
 	"\x13GetCommentsByPostId\x12\x18.post.GetCommentsRequest\x1a\x19.post.GetCommentsResponse\x129\n" +
 	"\bLikePost\x12\x15.post.LikePostRequest\x1a\x16.post.LikePostResponseB\x16Z\x14ouroboros/proto/postb\x06proto3"
@@ -762,35 +762,35 @@ func file_post_post_proto_rawDescGZIP() []byte {
 
 var file_post_post_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_post_post_proto_goTypes = []any{
-	(*CreatePostRequest)(nil),          // 0: post.CreatePostRequest
-	(*GetPostRequest)(nil),             // 1: post.GetPostRequest
-	(*GetPostsByIdsRequest)(nil),       // 2: post.GetPostsByIdsRequest
-	(*GetPostsByIdsResponse)(nil),      // 3: post.GetPostsByIdsResponse
-	(*GetPostsByAuthorIdRequest)(nil),  // 4: post.GetPostsByAuthorIdRequest
-	(*GetPostsByAuthorIdResponse)(nil), // 5: post.GetPostsByAuthorIdResponse
-	(*CreateCommentRequest)(nil),       // 6: post.CreateCommentRequest
-	(*GetCommentsRequest)(nil),         // 7: post.GetCommentsRequest
-	(*GetCommentsResponse)(nil),        // 8: post.GetCommentsResponse
-	(*Post)(nil),                       // 9: post.Post
-	(*Comment)(nil),                    // 10: post.Comment
-	(*LikePostRequest)(nil),            // 11: post.LikePostRequest
-	(*LikePostResponse)(nil),           // 12: post.LikePostResponse
+	(*CreatePostRequest)(nil),        // 0: post.CreatePostRequest
+	(*GetPostRequest)(nil),           // 1: post.GetPostRequest
+	(*GetPostsByIdsRequest)(nil),     // 2: post.GetPostsByIdsRequest
+	(*GetPostsByIdsResponse)(nil),    // 3: post.GetPostsByIdsResponse
+	(*GetPostsByUserIdRequest)(nil),  // 4: post.GetPostsByUserIdRequest
+	(*GetPostsByUserIdResponse)(nil), // 5: post.GetPostsByUserIdResponse
+	(*CreateCommentRequest)(nil),     // 6: post.CreateCommentRequest
+	(*GetCommentsRequest)(nil),       // 7: post.GetCommentsRequest
+	(*GetCommentsResponse)(nil),      // 8: post.GetCommentsResponse
+	(*Post)(nil),                     // 9: post.Post
+	(*Comment)(nil),                  // 10: post.Comment
+	(*LikePostRequest)(nil),          // 11: post.LikePostRequest
+	(*LikePostResponse)(nil),         // 12: post.LikePostResponse
 }
 var file_post_post_proto_depIdxs = []int32{
 	9,  // 0: post.GetPostsByIdsResponse.posts:type_name -> post.Post
-	9,  // 1: post.GetPostsByAuthorIdResponse.posts:type_name -> post.Post
+	9,  // 1: post.GetPostsByUserIdResponse.posts:type_name -> post.Post
 	10, // 2: post.GetCommentsResponse.comments:type_name -> post.Comment
 	0,  // 3: post.PostService.CreatePost:input_type -> post.CreatePostRequest
 	1,  // 4: post.PostService.GetPost:input_type -> post.GetPostRequest
 	2,  // 5: post.PostService.GetPostsByIds:input_type -> post.GetPostsByIdsRequest
-	4,  // 6: post.PostService.GetPostsByAuthorId:input_type -> post.GetPostsByAuthorIdRequest
+	4,  // 6: post.PostService.GetPostsByUserId:input_type -> post.GetPostsByUserIdRequest
 	6,  // 7: post.PostService.CreateComment:input_type -> post.CreateCommentRequest
 	7,  // 8: post.PostService.GetCommentsByPostId:input_type -> post.GetCommentsRequest
 	11, // 9: post.PostService.LikePost:input_type -> post.LikePostRequest
 	9,  // 10: post.PostService.CreatePost:output_type -> post.Post
 	9,  // 11: post.PostService.GetPost:output_type -> post.Post
 	3,  // 12: post.PostService.GetPostsByIds:output_type -> post.GetPostsByIdsResponse
-	5,  // 13: post.PostService.GetPostsByAuthorId:output_type -> post.GetPostsByAuthorIdResponse
+	5,  // 13: post.PostService.GetPostsByUserId:output_type -> post.GetPostsByUserIdResponse
 	10, // 14: post.PostService.CreateComment:output_type -> post.Comment
 	8,  // 15: post.PostService.GetCommentsByPostId:output_type -> post.GetCommentsResponse
 	12, // 16: post.PostService.LikePost:output_type -> post.LikePostResponse

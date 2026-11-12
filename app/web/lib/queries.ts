@@ -58,7 +58,7 @@ export const CREATE_POST = gql`
       id
       content
       createdAt
-      authorId
+      UserId
     }
   }
 `
@@ -69,7 +69,7 @@ export const LIKE_POST = gql`
       id
       content
       createdAt
-      authorId
+      UserId
     }
   }
 `

@@ -32,6 +32,7 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
+// string to list
 func csvEnv(key string, fallback []string) []string {
 	value := strings.TrimSpace(os.Getenv(key))
 	if value == "" {
@@ -65,6 +66,7 @@ func main() {
 	port := getEnv("PORT", "4000")
 
 	dialOptions := []grpc.DialOption{
+		//does not use TLS encryption
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
 
@@ -109,8 +111,11 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	// Register both GraphQL endpoints.
+	//This wraps your GraphQL handler with a request body size limit.
+	// 1,048,576 bytes = 1 MiB
 	graphqlHandler := http.MaxBytesHandler(srv, 1<<20)
+	// Register both GraphQL endpoints.
+
 	mux.Handle("/graphql", graphqlHandler)
 	mux.Handle("/query", graphqlHandler) // Backward compatibility
 

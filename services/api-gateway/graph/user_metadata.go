@@ -76,7 +76,7 @@ func (r *Resolver) loadUsersByID(ctx context.Context, ids []string) (map[string]
 		}
 	}
 
-	currentUserID := currentUserIDFromContext(ctx)
+	currentUserID, err := requireCurrentUserID(ctx)
 	for _, user := range users {
 		if user == nil {
 			continue
@@ -107,18 +107,18 @@ func (r *Resolver) loadUsersByID(ctx context.Context, ids []string) (map[string]
 }
 
 func (r *Resolver) attachAuthorsToPosts(ctx context.Context, posts []*model.Post) error {
-	authorIDs := make([]string, 0, len(posts))
+	UserIds := make([]string, 0, len(posts))
 	for _, post := range posts {
 		if post == nil {
 			continue
 		}
 		post.Comments = nonNilComments(post.Comments)
-		if strings.TrimSpace(post.AuthorID) != "" {
-			authorIDs = append(authorIDs, post.AuthorID)
+		if strings.TrimSpace(post.UserId) != "" {
+			UserIds = append(UserIds, post.UserId)
 		}
 	}
 
-	usersByID, err := r.loadUsersByID(ctx, authorIDs)
+	usersByID, err := r.loadUsersByID(ctx, UserIds)
 	if err != nil {
 		return err
 	}
@@ -127,9 +127,9 @@ func (r *Resolver) attachAuthorsToPosts(ctx context.Context, posts []*model.Post
 		if post == nil {
 			continue
 		}
-		author := usersByID[post.AuthorID]
+		author := usersByID[post.UserId]
 		if author == nil {
-			return fmt.Errorf("author %q was not found", post.AuthorID)
+			return fmt.Errorf("author %q was not found", post.UserId)
 		}
 		post.Author = author
 	}
@@ -175,23 +175,36 @@ func WithUserID(ctx context.Context, userID string) context.Context {
 	return context.WithValue(ctx, userIDContextKey{}, strings.TrimSpace(userID))
 }
 
-// currentUserIDFromContext returns only an identity established by trusted
-// authentication middleware. Never synthesize a fallback identity: doing so
-// lets unauthenticated requests act as a real user.
-func currentUserIDFromContext(ctx context.Context) string {
-	if ctx == nil {
-		return ""
+func mapProfile(p *profilepb.Profile) *model.Profile {
+	if p == nil {
+		return nil
 	}
-	if userID, ok := ctx.Value(userIDContextKey{}).(string); ok {
-		return strings.TrimSpace(userID)
-	}
-	return ""
-}
 
-func requireCurrentUserID(ctx context.Context) (string, error) {
-	userID := currentUserIDFromContext(ctx)
-	if userID == "" {
-		return "", fmt.Errorf("unauthorized")
+	experiences := make([]*model.Experience, 0, len(p.Experiences))
+
+	for _, e := range p.Experiences {
+		if e == nil {
+			continue
+		}
+
+		experiences = append(experiences, &model.Experience{
+			ID:          e.Id,
+			Title:       e.Title,
+			Company:     e.Company,
+			StartDate:   e.StartDate,
+			EndDate:     optionalString(e.EndDate),
+			Description: e.Description,
+		})
 	}
-	return userID, nil
+
+	return &model.Profile{
+		ID:          p.Id,
+		UserID:      p.UserId,
+		Headline:    optionalString(p.Headline),
+		About:       optionalString(p.About),
+		DisplayName: optionalString(p.DisplayName),
+		AvatarURL:   optionalString(p.AvatarUrl),
+		Bio:         optionalString(p.Bio),
+		Experiences: experiences,
+	}
 }

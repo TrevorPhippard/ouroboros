@@ -48,14 +48,14 @@ func SeedDB(db *gorm.DB) {
 	users := []auth.UserRecord{
 		{
 			ID:           "user-1",
-			Email:        "user1@example.com",
-			PasswordHash: "user1user1",
+			Email:        "test@test.com",
+			PasswordHash: "$2a$10$eJFKfyWzJq/Z26J4jg7xRubjzZUVvc7MafWPGAzFnkZdRUPp00rWq", //testtest
 			DisplayName:  "User One",
 		},
 		{
 			ID:           "user-2",
-			Email:        "user2@example.com",
-			PasswordHash: "user2user2",
+			Email:        "test2@test.com",
+			PasswordHash: "$2a$10$JahrLqn0n9K.hpopLY5pSe6eycK1rH7fTQzLfim8J4Vw4jSZ/m4N6", //test2test2
 			DisplayName:  "User Two",
 		},
 	}
