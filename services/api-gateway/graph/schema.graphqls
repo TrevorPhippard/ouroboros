@@ -9,10 +9,14 @@ schema {
 # ------------------------
 
 type Query {
-  # Auth / Profile
+  # Auth
   me: User
   user(id: ID!): User
   users(ids: [ID!]!): [User!]!
+
+  # Profiles
+  profile(userId: ID!): Profile
+  profiles(userIds: [ID!]!): [Profile!]!
 
   # Posts
   post(id: ID!): Post
@@ -100,7 +104,7 @@ type Post {
   id: ID!
   content: String!
   createdAt: String!
-  authorId: ID!
+  UserId: ID!
 
   # Resolved via Profile/Auth Service
   author: User!
@@ -112,7 +116,7 @@ type Post {
 type Comment {
   id: ID!
   postId: ID!
-  authorId: ID!
+  UserId: ID!
   content: String!
   createdAt: String!
 
@@ -197,12 +201,12 @@ input UpdateProfileInput {
 # ------------------------
 
 input CreatePostInput {
-  authorId: ID!
+  UserId: ID!
   content: String!
 }
 
 input CreateCommentInput {
-  authorId: ID!
+  UserId: ID!
   postId: ID!
   content: String!
 }

@@ -26,7 +26,7 @@ func (s *Service) HandlePostCreated(ctx context.Context, event PostCreatedEvent)
 		PostId: event.Data.PostID,
 		Post: &pbFeed.Post{
 			Id:        event.Data.PostID,
-			AuthorId:  event.Data.AuthorID,
+			AuthorId:  event.Data.UserId,
 			Content:   event.Data.Content,
 			Timestamp: event.Timestamp,
 		},
@@ -38,12 +38,12 @@ func (s *Service) HandlePostCreated(ctx context.Context, event PostCreatedEvent)
 	}
 
 	if job == nil {
-		followers, _ := s.social.GetFollowers(ctx, event.Data.AuthorID)
+		followers, _ := s.social.GetFollowers(ctx, event.Data.UserId)
 
 		job = &FanoutJob{
 			EventID:   event.EventID,
 			PostID:    event.Data.PostID,
-			AuthorID:  event.Data.AuthorID,
+			UserId:    event.Data.UserId,
 			Followers: followers,
 			BatchSize: 100,
 			Completed: make(map[int]bool),

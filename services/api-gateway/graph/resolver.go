@@ -9,10 +9,8 @@ import (
 	profilepb "ouroboros/proto/generated/profile"
 )
 
-// This file will not be regenerated automatically.
-//
-// It serves as dependency injection for your app, add any dependencies you require here.
-
+// Resolver holds all dependencies required by GraphQL resolvers.
+// It acts as the dependency injection container for the GraphQL API.
 type Resolver struct {
 	AuthClient         authpb.AuthServiceClient
 	ConnectionClient   connpb.ConnectionServiceClient
@@ -20,4 +18,33 @@ type Resolver struct {
 	NotificationClient notificationpb.NotificationServiceClient
 	PostClient         postpb.PostServiceClient
 	ProfileClient      profilepb.ProfileServiceClient
+}
+
+// Resolver implementations.
+// These are shared across all resolver files.
+type mutationResolver struct {
+	*Resolver
+}
+
+type queryResolver struct {
+	*Resolver
+}
+
+type subscriptionResolver struct {
+	*Resolver
+}
+
+// Mutation returns the MutationResolver implementation.
+func (r *Resolver) Mutation() MutationResolver {
+	return &mutationResolver{r}
+}
+
+// Query returns the QueryResolver implementation.
+func (r *Resolver) Query() QueryResolver {
+	return &queryResolver{r}
+}
+
+// Subscription returns the SubscriptionResolver implementation.
+func (r *Resolver) Subscription() SubscriptionResolver {
+	return &subscriptionResolver{r}
 }

@@ -10,7 +10,7 @@ service PostService {
   rpc CreatePost (CreatePostRequest) returns (Post);
   rpc GetPost (GetPostRequest) returns (Post);
   rpc GetPostsByIds (GetPostsByIdsRequest) returns (GetPostsByIdsResponse);
-  rpc GetPostsByAuthorId (GetPostsByAuthorIdRequest) returns (GetPostsByAuthorIdResponse);
+  rpc GetPostsByUserId (GetPostsByUserIdRequest) returns (GetPostsByUserIdResponse);
   rpc CreateComment (CreateCommentRequest) returns (Comment);
   rpc GetCommentsByPostId (GetCommentsRequest) returns (GetCommentsResponse);
   rpc LikePost (LikePostRequest) returns (LikePostResponse);
@@ -33,12 +33,12 @@ message GetPostsByIdsResponse {
   repeated Post posts = 1;
 }
 
-message GetPostsByAuthorIdRequest {
+message GetPostsByUserIdRequest {
   string author_id = 1;
   int32 limit = 2;
 }
 
-message GetPostsByAuthorIdResponse {
+message GetPostsByUserIdResponse {
   repeated Post posts = 1;
 }
 

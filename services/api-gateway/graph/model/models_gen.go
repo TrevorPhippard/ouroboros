@@ -10,7 +10,7 @@ type AuthPayload struct {
 type Comment struct {
 	ID        string `json:"id"`
 	PostID    string `json:"postId"`
-	AuthorID  string `json:"authorId"`
+	UserId    string `json:"UserId"`
 	Content   string `json:"content"`
 	CreatedAt string `json:"createdAt"`
 	Author    *User  `json:"author"`
@@ -21,14 +21,14 @@ type ConnectResponse struct {
 }
 
 type CreateCommentInput struct {
-	AuthorID string `json:"authorId"`
-	PostID   string `json:"postId"`
-	Content  string `json:"content"`
+	UserId  string `json:"UserId"`
+	PostID  string `json:"postId"`
+	Content string `json:"content"`
 }
 
 type CreatePostInput struct {
-	AuthorID string `json:"authorId"`
-	Content  string `json:"content"`
+	UserId  string `json:"UserId"`
+	Content string `json:"content"`
 }
 
 type Experience struct {
@@ -69,7 +69,7 @@ type Post struct {
 	ID        string     `json:"id"`
 	Content   string     `json:"content"`
 	CreatedAt string     `json:"createdAt"`
-	AuthorID  string     `json:"authorId"`
+	UserId    string     `json:"UserId"`
 	Author    *User      `json:"author"`
 	Comments  []*Comment `json:"comments"`
 }

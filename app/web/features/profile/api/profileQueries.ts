@@ -3,16 +3,23 @@
  * fields and variables can be checked against the backend schema together.
  */
 export const GET_PROFILE = /* GraphQL */ `
-  query GetProfile($id: ID!) {
-    user(id: $id) {
+  query GetProfile($userId: ID!) {
+    profile(userId: $userId) {
       id
-      username
+      userId
+      headline
+      about
       displayName
       avatarUrl
       bio
-      followersCount
-      followingCount
-      isFollowing
+      experiences {
+        id
+        title
+        company
+        startDate
+        endDate
+        description
+      }
     }
   }
 `

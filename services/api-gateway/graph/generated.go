@@ -44,7 +44,7 @@ type ComplexityRoot struct {
 
 	Comment struct {
 		Author    func(childComplexity int) int
-		AuthorID  func(childComplexity int) int
+		UserId    func(childComplexity int) int
 		Content   func(childComplexity int) int
 		CreatedAt func(childComplexity int) int
 		ID        func(childComplexity int) int
@@ -101,7 +101,7 @@ type ComplexityRoot struct {
 
 	Post struct {
 		Author    func(childComplexity int) int
-		AuthorID  func(childComplexity int) int
+		UserId    func(childComplexity int) int
 		Comments  func(childComplexity int, limit *int32) int
 		Content   func(childComplexity int) int
 		CreatedAt func(childComplexity int) int
@@ -214,12 +214,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Comment.Author(childComplexity), true
-	case "Comment.authorId":
-		if e.ComplexityRoot.Comment.AuthorID == nil {
+	case "Comment.UserId":
+		if e.ComplexityRoot.Comment.UserId == nil {
 			break
 		}
 
-		return e.ComplexityRoot.Comment.AuthorID(childComplexity), true
+		return e.ComplexityRoot.Comment.UserId(childComplexity), true
 	case "Comment.content":
 		if e.ComplexityRoot.Comment.Content == nil {
 			break
@@ -482,12 +482,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Post.Author(childComplexity), true
-	case "Post.authorId":
-		if e.ComplexityRoot.Post.AuthorID == nil {
+	case "Post.UserId":
+		if e.ComplexityRoot.Post.UserId == nil {
 			break
 		}
 
-		return e.ComplexityRoot.Post.AuthorID(childComplexity), true
+		return e.ComplexityRoot.Post.UserId(childComplexity), true
 	case "Post.comments":
 		if e.ComplexityRoot.Post.Comments == nil {
 			break
@@ -1264,14 +1264,14 @@ func (ec *executionContext) fieldContext_Comment_postId(_ context.Context, field
 	return fc, nil
 }
 
-func (ec *executionContext) _Comment_authorId(ctx context.Context, field graphql.CollectedField, obj *model.Comment) (ret graphql.Marshaler) {
+func (ec *executionContext) _Comment_UserId(ctx context.Context, field graphql.CollectedField, obj *model.Comment) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_Comment_authorId,
+		ec.fieldContext_Comment_UserId,
 		func(ctx context.Context) (any, error) {
-			return obj.AuthorID, nil
+			return obj.UserId, nil
 		},
 		nil,
 		ec.marshalNID2string,
@@ -1280,7 +1280,7 @@ func (ec *executionContext) _Comment_authorId(ctx context.Context, field graphql
 	)
 }
 
-func (ec *executionContext) fieldContext_Comment_authorId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Comment_UserId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Comment",
 		Field:      field,
@@ -1675,8 +1675,8 @@ func (ec *executionContext) fieldContext_FeedItem_post(_ context.Context, field 
 				return ec.fieldContext_Post_content(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Post_createdAt(ctx, field)
-			case "authorId":
-				return ec.fieldContext_Post_authorId(ctx, field)
+			case "UserId":
+				return ec.fieldContext_Post_UserId(ctx, field)
 			case "author":
 				return ec.fieldContext_Post_author(ctx, field)
 			case "comments":
@@ -1942,8 +1942,8 @@ func (ec *executionContext) fieldContext_Mutation_createPost(ctx context.Context
 				return ec.fieldContext_Post_content(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Post_createdAt(ctx, field)
-			case "authorId":
-				return ec.fieldContext_Post_authorId(ctx, field)
+			case "UserId":
+				return ec.fieldContext_Post_UserId(ctx, field)
 			case "author":
 				return ec.fieldContext_Post_author(ctx, field)
 			case "comments":
@@ -1995,8 +1995,8 @@ func (ec *executionContext) fieldContext_Mutation_createComment(ctx context.Cont
 				return ec.fieldContext_Comment_id(ctx, field)
 			case "postId":
 				return ec.fieldContext_Comment_postId(ctx, field)
-			case "authorId":
-				return ec.fieldContext_Comment_authorId(ctx, field)
+			case "UserId":
+				return ec.fieldContext_Comment_UserId(ctx, field)
 			case "content":
 				return ec.fieldContext_Comment_content(ctx, field)
 			case "createdAt":
@@ -2052,8 +2052,8 @@ func (ec *executionContext) fieldContext_Mutation_likePost(ctx context.Context, 
 				return ec.fieldContext_Post_content(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Post_createdAt(ctx, field)
-			case "authorId":
-				return ec.fieldContext_Post_authorId(ctx, field)
+			case "UserId":
+				return ec.fieldContext_Post_UserId(ctx, field)
 			case "author":
 				return ec.fieldContext_Post_author(ctx, field)
 			case "comments":
@@ -2518,14 +2518,14 @@ func (ec *executionContext) fieldContext_Post_createdAt(_ context.Context, field
 	return fc, nil
 }
 
-func (ec *executionContext) _Post_authorId(ctx context.Context, field graphql.CollectedField, obj *model.Post) (ret graphql.Marshaler) {
+func (ec *executionContext) _Post_UserId(ctx context.Context, field graphql.CollectedField, obj *model.Post) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_Post_authorId,
+		ec.fieldContext_Post_UserId,
 		func(ctx context.Context) (any, error) {
-			return obj.AuthorID, nil
+			return obj.UserId, nil
 		},
 		nil,
 		ec.marshalNID2string,
@@ -2534,7 +2534,7 @@ func (ec *executionContext) _Post_authorId(ctx context.Context, field graphql.Co
 	)
 }
 
-func (ec *executionContext) fieldContext_Post_authorId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Post_UserId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Post",
 		Field:      field,
@@ -2626,8 +2626,8 @@ func (ec *executionContext) fieldContext_Post_comments(ctx context.Context, fiel
 				return ec.fieldContext_Comment_id(ctx, field)
 			case "postId":
 				return ec.fieldContext_Comment_postId(ctx, field)
-			case "authorId":
-				return ec.fieldContext_Comment_authorId(ctx, field)
+			case "UserId":
+				return ec.fieldContext_Comment_UserId(ctx, field)
 			case "content":
 				return ec.fieldContext_Comment_content(ctx, field)
 			case "createdAt":
@@ -3031,8 +3031,8 @@ func (ec *executionContext) fieldContext_Query_post(ctx context.Context, field g
 				return ec.fieldContext_Post_content(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Post_createdAt(ctx, field)
-			case "authorId":
-				return ec.fieldContext_Post_authorId(ctx, field)
+			case "UserId":
+				return ec.fieldContext_Post_UserId(ctx, field)
 			case "author":
 				return ec.fieldContext_Post_author(ctx, field)
 			case "comments":
@@ -3073,8 +3073,8 @@ func (ec *executionContext) fieldContext_Query_posts(ctx context.Context, field 
 				return ec.fieldContext_Post_content(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Post_createdAt(ctx, field)
-			case "authorId":
-				return ec.fieldContext_Post_authorId(ctx, field)
+			case "UserId":
+				return ec.fieldContext_Post_UserId(ctx, field)
 			case "author":
 				return ec.fieldContext_Post_author(ctx, field)
 			case "comments":
@@ -3128,8 +3128,8 @@ func (ec *executionContext) fieldContext_Query_postsByIds(ctx context.Context, f
 				return ec.fieldContext_Post_content(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Post_createdAt(ctx, field)
-			case "authorId":
-				return ec.fieldContext_Post_authorId(ctx, field)
+			case "UserId":
+				return ec.fieldContext_Post_UserId(ctx, field)
 			case "author":
 				return ec.fieldContext_Post_author(ctx, field)
 			case "comments":
@@ -3794,8 +3794,8 @@ func (ec *executionContext) fieldContext_User_posts(ctx context.Context, field g
 				return ec.fieldContext_Post_content(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Post_createdAt(ctx, field)
-			case "authorId":
-				return ec.fieldContext_Post_authorId(ctx, field)
+			case "UserId":
+				return ec.fieldContext_Post_UserId(ctx, field)
 			case "author":
 				return ec.fieldContext_Post_author(ctx, field)
 			case "comments":
@@ -5275,20 +5275,20 @@ func (ec *executionContext) unmarshalInputCreateCommentInput(ctx context.Context
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"authorId", "postId", "content"}
+	fieldsInOrder := [...]string{"UserId", "postId", "content"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
-		case "authorId":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("authorId"))
+		case "UserId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("UserId"))
 			data, err := ec.unmarshalNID2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.AuthorID = data
+			it.UserId = data
 		case "postId":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("postId"))
 			data, err := ec.unmarshalNID2string(ctx, v)
@@ -5319,20 +5319,20 @@ func (ec *executionContext) unmarshalInputCreatePostInput(ctx context.Context, o
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"authorId", "content"}
+	fieldsInOrder := [...]string{"UserId", "content"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
-		case "authorId":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("authorId"))
+		case "UserId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("UserId"))
 			data, err := ec.unmarshalNID2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.AuthorID = data
+			it.UserId = data
 		case "content":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("content"))
 			data, err := ec.unmarshalNString2string(ctx, v)
@@ -5557,8 +5557,8 @@ func (ec *executionContext) _Comment(ctx context.Context, sel ast.SelectionSet, 
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "authorId":
-			out.Values[i] = ec._Comment_authorId(ctx, field, obj)
+		case "UserId":
+			out.Values[i] = ec._Comment_UserId(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -5994,8 +5994,8 @@ func (ec *executionContext) _Post(ctx context.Context, sel ast.SelectionSet, obj
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "authorId":
-			out.Values[i] = ec._Post_authorId(ctx, field, obj)
+		case "UserId":
+			out.Values[i] = ec._Post_UserId(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

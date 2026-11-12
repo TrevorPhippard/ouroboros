@@ -1,8 +1,8 @@
-import { gqlRequest } from "@/services/graphql/client"
-import { GET_FEED } from "@/lib/queries"
+// import { gqlRequest } from "@/services/graphql/client"
+// import { GET_FEED } from "@/lib/queries"
 import { PostType } from "../schemas"
 import { useAuthStore } from "@/store/useAuthStore"
-import { time } from "console"
+// import { time } from "console"
 
 interface FeedPageData {
   feed: {
@@ -34,7 +34,7 @@ export const useFeedQuery = () => {
                   "Just shipped the new dashboard UI using Tailwind CSS and TanStack Query! Excited for user feedback. 🚀",
                 createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 mins ago
                 author: {
-                  id: "author-1",
+                  id: "profile-1",
                   username: "sarah_dev",
                   displayName: "Sarah Jenkins",
                   avatarUrl:
@@ -51,7 +51,7 @@ export const useFeedQuery = () => {
                   "Working on state management strategies today. What is everyone's current favorite setup?",
                 createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(), // 2 hours ago
                 author: {
-                  id: "author-2",
+                  id: "profile-2",
                   username: "alex_codes",
                   displayName: "Alex Rivera",
                   avatarUrl:
@@ -67,11 +67,11 @@ export const useFeedQuery = () => {
       return {
         feed: {
           items:
-            response.feed?.items?.flatMap((item: any) => {
+            response.feed?.items?.flatMap((item) => {
               if (!item.post?.author) return []
               return [
                 {
-                  id: item.post.id ?? item.postId,
+                  id: item.post.id,
                   content: item.post.content,
                   createdAt: item.post.createdAt ?? item.cursor,
                   likes: 0,

@@ -29,9 +29,9 @@ type postCreatedEvent struct {
 	Type      string `json:"type"`
 	Timestamp string `json:"timestamp"`
 	Data      struct {
-		PostID   string `json:"postId"`
-		AuthorID string `json:"authorId"`
-		Content  string `json:"content"`
+		PostID  string `json:"postId"`
+		UserId  string `json:"UserId"`
+		Content string `json:"content"`
 	} `json:"data"`
 }
 
@@ -49,7 +49,7 @@ func (s *PostServiceServer) CreatePost(ctx context.Context, req *pb.CreatePostRe
 
 	post := &models.DBPost{
 		ID:        uuid.NewString(),
-		AuthorID:  req.AuthorId,
+		UserId:    req.AuthorId,
 		Content:   content,
 		CreatedAt: time.Now().UTC(),
 	}
@@ -133,7 +133,7 @@ func (s *PostServiceServer) GetCommentsByPostId(ctx context.Context, req *pb.Get
 		result = append(result, &pb.Comment{
 			Id:        comments[i].ID,
 			PostId:    comments[i].PostID,
-			AuthorId:  comments[i].AuthorID,
+			AuthorId:  comments[i].UserId,
 			Content:   comments[i].Content,
 			CreatedAt: comments[i].CreatedAt.UTC().Format(time.RFC3339),
 		})
@@ -174,7 +174,7 @@ func (s *PostServiceServer) publishPostCreated(ctx context.Context, post *models
 		Timestamp: post.CreatedAt.UTC().Format(time.RFC3339),
 	}
 	event.Data.PostID = post.ID
-	event.Data.AuthorID = post.AuthorID
+	event.Data.UserId = post.UserId
 	event.Data.Content = post.Content
 
 	value, err := json.Marshal(event)
@@ -183,7 +183,7 @@ func (s *PostServiceServer) publishPostCreated(ctx context.Context, post *models
 	}
 
 	return s.Writer.WriteMessages(ctx, kafka.Message{
-		Key:   []byte(post.AuthorID),
+		Key:   []byte(post.UserId),
 		Value: value,
 	})
 }
@@ -191,7 +191,7 @@ func (s *PostServiceServer) publishPostCreated(ctx context.Context, post *models
 func toProtoPost(post *models.DBPost) *pb.Post {
 	return &pb.Post{
 		Id:        post.ID,
-		AuthorId:  post.AuthorID,
+		AuthorId:  post.UserId,
 		Content:   post.Content,
 		CreatedAt: post.CreatedAt.UTC().Format(time.RFC3339),
 	}
