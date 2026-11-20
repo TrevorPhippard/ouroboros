@@ -1,14 +1,14 @@
 # Where are all the schema files located? globs are supported eg  src/**/*.graphqls
 schema:
-  - graph/*.graphqls
+  - graph/schema/*.graphqls
 
 # Where should the generated server code go?
 exec:
-  package: graph
+  package: generated
   layout: single-file # Only other option is "follow-schema," ie multi-file.
 
   # Only for single-file layout:
-  filename: graph/generated.go
+  filename: graph/generated/generated.go
 
   # Only for follow-schema layout:
   # dir: graph
@@ -95,7 +95,7 @@ resolver:
 # omit_root_models: false
 
 # Optional: turn on to exclude resolver fields from the generated models file.
-# omit_resolver_fields: false
+omit_resolver_fields: true
 
 # Optional: turn on to omit panic handler in the generated server
 # omit_panic_handler: false
@@ -193,3 +193,29 @@ models:
     model:
       - github.com/99designs/gqlgen/graphql.Int
       - github.com/99designs/gqlgen/graphql.Int64
+
+  # Nested fields below are resolved lazily (and batched through the request
+  # data loaders in graph/loaders.go) instead of being eagerly stuffed into the
+  # model structs. See graph/*.resolvers.go for the field resolvers.
+  User:
+    fields:
+      posts:
+        resolver: true
+  Post:
+    fields:
+      author:
+        resolver: true
+      comments:
+        resolver: true
+  Comment:
+    fields:
+      author:
+        resolver: true
+  Notification:
+    fields:
+      actor:
+        resolver: true
+  FeedItem:
+    fields:
+      post:
+        resolver: true
