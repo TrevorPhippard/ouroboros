@@ -1,0 +1,19 @@
+# ------------------------
+# Feed Service & Pagination
+# ------------------------
+
+extend type Query {
+  feed(userId: ID!, limit: Int = 20, cursor: String): FeedResponse
+}
+
+type FeedItem {
+  postId: ID!
+  cursor: String!
+  # Resolved by Post Service using postId
+  post: Post
+}
+
+type FeedResponse {
+  items: [FeedItem!]!
+  nextCursor: String
+}

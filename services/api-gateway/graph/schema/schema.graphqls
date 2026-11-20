@@ -1,0 +1,12 @@
+# Root schema. Each domain file below extends these root types, which keeps
+# gqlgen's "follow-schema" layout generating one *.resolvers.go per domain.
+
+schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}
+
+type Query
+type Mutation
+type Subscription

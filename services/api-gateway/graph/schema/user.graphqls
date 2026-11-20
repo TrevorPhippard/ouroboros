@@ -1,0 +1,22 @@
+# ------------------------
+# Users (Auth + Profile + Connection data)
+# ------------------------
+
+extend type Query {
+  me: User
+  user(id: ID!): User
+  users(ids: [ID!]!): [User!]!
+}
+
+type User {
+  id: ID!
+  email: String! # From Auth Service
+  username: String! # From Auth Service
+  displayName: String # From Profile Service
+  avatarUrl: String # From Profile Service
+  bio: String # From Profile Service
+  followersCount: Int! # From Connection Service
+  followingCount: Int! # From Connection Service
+  isFollowing: Boolean! # From Connection Service (Contextual)
+  posts(limit: Int = 10): [Post!]! # Resolved via Post Service
+}
