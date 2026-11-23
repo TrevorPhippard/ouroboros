@@ -1,50 +1,53 @@
 package graph
 
+// This file will not be regenerated automatically.
+//
+// The resolvers in this package are deliberately thin: they validate arguments,
+// authorize, and delegate. Domain logic lives in ../internal. Keep helpers out
+// of *.resolvers.go files: gqlgen comments out anything in them that is not a
+// resolver method.
+
 import (
-	authpb "ouroboros/proto/generated/auth"
-	connpb "ouroboros/proto/generated/connection"
-	feedpb "ouroboros/proto/generated/feed"
-	notificationpb "ouroboros/proto/generated/notification"
-	postpb "ouroboros/proto/generated/post"
-	profilepb "ouroboros/proto/generated/profile"
+	"context"
+	"time"
+
+	"api-gateway/internal/catalog"
+	"api-gateway/internal/clients"
+	"api-gateway/internal/loaders"
+	"api-gateway/internal/notifications"
 )
 
-// Resolver holds all dependencies required by GraphQL resolvers.
-// It acts as the dependency injection container for the GraphQL API.
+// recommendationCount is how many suggestions `recommendations` returns.
+const recommendationCount = 10
+
+// Resolver is the dependency container shared by all resolvers.
 type Resolver struct {
-	AuthClient         authpb.AuthServiceClient
-	ConnectionClient   connpb.ConnectionServiceClient
-	FeedClient         feedpb.FeedServiceClient
-	NotificationClient notificationpb.NotificationServiceClient
-	PostClient         postpb.PostServiceClient
-	ProfileClient      profilepb.ProfileServiceClient
+	Clients clients.Set
+
+	// Catalog backs Query.posts, User.posts and Post.comments. Optional: when
+	// nil, Query.posts reports catalog.ErrUnavailable and the nested lists are
+	// empty.
+	Catalog catalog.PostCatalog
+	// Recommender backs Query.recommendations. Optional: when nil the query
+	// reports catalog.ErrUnavailable.
+	Recommender catalog.Recommender
+
+	// NotificationPollInterval is how often a notificationReceived subscription
+	// polls the Notification service. Defaults to notifications.DefaultPollInterval.
+	NotificationPollInterval time.Duration
 }
 
-// Resolver implementations.
-// These are shared across all resolver files.
-type mutationResolver struct {
-	*Resolver
+// LoaderDeps returns what the per-operation data loaders need. The server
+// passes it to loaders.Extension.
+func (r *Resolver) LoaderDeps() loaders.Deps {
+	return loaders.Deps{Clients: r.Clients, Catalog: r.Catalog}
 }
 
-type queryResolver struct {
-	*Resolver
+// loaders returns the loaders for this operation.
+func (r *Resolver) loaders(ctx context.Context) *loaders.Loaders {
+	return r.LoaderDeps().For(ctx)
 }
 
-type subscriptionResolver struct {
-	*Resolver
-}
-
-// Mutation returns the MutationResolver implementation.
-func (r *Resolver) Mutation() MutationResolver {
-	return &mutationResolver{r}
-}
-
-// Query returns the QueryResolver implementation.
-func (r *Resolver) Query() QueryResolver {
-	return &queryResolver{r}
-}
-
-// Subscription returns the SubscriptionResolver implementation.
-func (r *Resolver) Subscription() SubscriptionResolver {
-	return &subscriptionResolver{r}
+func (r *Resolver) notifications() notifications.Service {
+	return notifications.Service{Client: r.Clients.Notification, PollInterval: r.NotificationPollInterval}
 }

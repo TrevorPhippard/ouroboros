@@ -1,152 +1,43 @@
+// Command api-gateway is the Ouroboros GraphQL gateway: a single GraphQL API in
+// front of the auth, connection, feed, notification, post and profile services.
 package main
 
 import (
 	"log"
-	"net/http"
-	"os"
-	"strings"
-	"time"
 
 	"api-gateway/graph"
-
-	"github.com/99designs/gqlgen/graphql/handler"
-	"github.com/99designs/gqlgen/graphql/playground"
-	"github.com/rs/cors"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-
-	// Importing specific generated proto packages
-	authpb "ouroboros/proto/generated/auth"
-	connpb "ouroboros/proto/generated/connection"
-	feedpb "ouroboros/proto/generated/feed"
-	notifpb "ouroboros/proto/generated/notification"
-	postpb "ouroboros/proto/generated/post"
-	profilepb "ouroboros/proto/generated/profile"
+	"api-gateway/internal/catalog"
+	"api-gateway/internal/clients"
+	"api-gateway/internal/config"
+	"api-gateway/internal/server"
 )
 
-// Helper function to get env or fallback
-func getEnv(key, fallback string) string {
-	if value, exists := os.LookupEnv(key); exists && strings.TrimSpace(value) != "" {
-		return strings.TrimSpace(value)
-	}
-	return fallback
-}
-
-// string to list
-func csvEnv(key string, fallback []string) []string {
-	value := strings.TrimSpace(os.Getenv(key))
-	if value == "" {
-		return fallback
-	}
-
-	var values []string
-	for _, item := range strings.Split(value, ",") {
-		item = strings.TrimSpace(item)
-		if item != "" {
-			values = append(values, item)
-		}
-	}
-	if len(values) == 0 {
-		return fallback
-	}
-	return values
-}
-
-// dialService encapsulates gRPC client creation and fatal error handling.
-func dialService(name, envKey, defaultURL string, opts []grpc.DialOption) *grpc.ClientConn {
-	url := getEnv(envKey, defaultURL)
-	conn, err := grpc.NewClient(url, opts...)
-	if err != nil {
-		log.Fatalf("could not connect to %s service at %s: %v", name, url, err)
-	}
-	return conn
-}
-
 func main() {
-	port := getEnv("PORT", "4000")
+	cfg := config.Load()
+	cfg.Warn()
+	backend, closeBackend, err := clients.Dial(cfg.Services)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer closeBackend()
 
-	dialOptions := []grpc.DialOption{
-		//does not use TLS encryption
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	// Optional capabilities that need Post/Connection RPCs beyond today's API;
+	// both are nil unless built with -tags postext (docs/proto-extensions.md).
+	posts, recommender := catalog.FromClients(backend)
+	if posts == nil {
+		log.Printf("post catalog not configured: Query.posts is unavailable and User.posts / Post.comments are empty (build with -tags postext once the Post service exposes the list RPCs)")
+	}
+	if recommender == nil {
+		log.Printf("recommender not configured: Query.recommendations is unavailable (build with -tags postext once the Connection service exposes GetRecommendations)")
 	}
 
-	// Initialize gRPC service connections cleanly
-	authConn := dialService("auth", "AUTH_SERVICE_URL", "localhost:50053", dialOptions)
-	defer authConn.Close()
-
-	connConn := dialService("connection", "CONNECTION_SERVICE_URL", "localhost:50054", dialOptions)
-	defer connConn.Close()
-
-	feedConn := dialService("feed", "FEED_SERVICE_URL", "localhost:50055", dialOptions)
-	defer feedConn.Close()
-
-	notifConn := dialService("notification", "NOTIFICATION_SERVICE_URL", "localhost:50056", dialOptions)
-	defer notifConn.Close()
-
-	postConn := dialService("post", "POST_SERVICE_URL", "localhost:50057", dialOptions)
-	defer postConn.Close()
-
-	profileConn := dialService("profile", "PROFILE_SERVICE_URL", "localhost:50058", dialOptions)
-	defer profileConn.Close()
-
-	// Initialize Resolver with specific clients
-	resolver := &graph.Resolver{
-		AuthClient:         authpb.NewAuthServiceClient(authConn),
-		ConnectionClient:   connpb.NewConnectionServiceClient(connConn),
-		FeedClient:         feedpb.NewFeedServiceClient(feedConn),
-		NotificationClient: notifpb.NewNotificationServiceClient(notifConn),
-		PostClient:         postpb.NewPostServiceClient(postConn),
-		ProfileClient:      profilepb.NewProfileServiceClient(profileConn),
-	}
-
-	srv := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: resolver}))
-
-	// Configure CORS through the environment instead of hard-coding one LAN IP.
-	c := cors.New(cors.Options{
-		AllowedOrigins:   csvEnv("CORS_ALLOWED_ORIGINS", []string{"http://localhost:3000", "http://127.0.0.1:3000"}),
-		AllowCredentials: true,
-		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
-		AllowedHeaders:   []string{"Authorization", "Content-Type"},
+	srv := server.New(cfg, &graph.Resolver{
+		Clients:                  backend,
+		Catalog:                  posts,
+		Recommender:              recommender,
+		NotificationPollInterval: cfg.NotificationPollInterval,
 	})
 
-	mux := http.NewServeMux()
-
-	//This wraps your GraphQL handler with a request body size limit.
-	// 1,048,576 bytes = 1 MiB
-	graphqlHandler := http.MaxBytesHandler(srv, 1<<20)
-	// Register both GraphQL endpoints.
-
-	mux.Handle("/graphql", graphqlHandler)
-	mux.Handle("/query", graphqlHandler) // Backward compatibility
-
-	mux.Handle("/", playground.Handler("GraphQL Playground", "/graphql"))
-
-	// Health check.
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok\n"))
-	})
-
-	jwtSecret := getEnv("JWT_SECRET", "JWT_SECRET")
-	if jwtSecret == "" {
-		log.Printf("WARNING: JWT_SECRET is not set; authenticated GraphQL operations will be rejected")
-	}
-
-	server := &http.Server{
-		Addr:              ":" + port,
-		Handler:           c.Handler(AuthContextMiddleware(jwtSecret, mux)),
-		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       15 * time.Second,
-		WriteTimeout:      30 * time.Second,
-		IdleTimeout:       60 * time.Second,
-	}
-
-	log.Printf("Ouroboros Gateway listening on :%s", port)
-	log.Fatal(server.ListenAndServe())
+	log.Printf("Ouroboros Gateway listening on :%s", cfg.Port)
+	log.Fatal(srv.ListenAndServe())
 }

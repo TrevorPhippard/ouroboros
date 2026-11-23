@@ -1,0 +1,16 @@
+# ------------------------
+# Connection Service
+# ------------------------
+
+extend type Query {
+  recommendations: [User!]!
+}
+
+extend type Mutation {
+  followUser(userId: ID!): ConnectResponse!
+  unfollowUser(userId: ID!): ConnectResponse!
+}
+
+type ConnectResponse {
+  success: Boolean!
+}

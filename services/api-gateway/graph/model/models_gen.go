@@ -10,10 +10,9 @@ type AuthPayload struct {
 type Comment struct {
 	ID        string `json:"id"`
 	PostID    string `json:"postId"`
-	UserId    string `json:"UserId"`
+	UserID    string `json:"UserId"`
 	Content   string `json:"content"`
 	CreatedAt string `json:"createdAt"`
-	Author    *User  `json:"author"`
 }
 
 type ConnectResponse struct {
@@ -21,13 +20,13 @@ type ConnectResponse struct {
 }
 
 type CreateCommentInput struct {
-	UserId  string `json:"UserId"`
+	UserID  string `json:"UserId"`
 	PostID  string `json:"postId"`
 	Content string `json:"content"`
 }
 
 type CreatePostInput struct {
-	UserId  string `json:"UserId"`
+	UserID  string `json:"UserId"`
 	Content string `json:"content"`
 }
 
@@ -43,7 +42,6 @@ type Experience struct {
 type FeedItem struct {
 	PostID string `json:"postId"`
 	Cursor string `json:"cursor"`
-	Post   *Post  `json:"post,omitempty"`
 }
 
 type FeedResponse struct {
@@ -62,16 +60,13 @@ type Notification struct {
 	EntityID  *string `json:"entityId,omitempty"`
 	CreatedAt string  `json:"createdAt"`
 	Read      bool    `json:"read"`
-	Actor     *User   `json:"actor,omitempty"`
 }
 
 type Post struct {
-	ID        string     `json:"id"`
-	Content   string     `json:"content"`
-	CreatedAt string     `json:"createdAt"`
-	UserId    string     `json:"UserId"`
-	Author    *User      `json:"author"`
-	Comments  []*Comment `json:"comments"`
+	ID        string `json:"id"`
+	Content   string `json:"content"`
+	CreatedAt string `json:"createdAt"`
+	UserID    string `json:"UserId"`
 }
 
 type Profile struct {
@@ -124,5 +119,4 @@ type User struct {
 	FollowersCount int32   `json:"followersCount"`
 	FollowingCount int32   `json:"followingCount"`
 	IsFollowing    bool    `json:"isFollowing"`
-	Posts          []*Post `json:"posts"`
 }
