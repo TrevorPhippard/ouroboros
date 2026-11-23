@@ -35,7 +35,7 @@ func Load() Config {
 		JWTSecret: str("JWT_SECRET", ""),
 		AllowedOrigins: csv("CORS_ALLOWED_ORIGINS",
 			[]string{"http://localhost:3000", "http://127.0.0.1:3000"}),
-		EnablePlayground:         boolean("ENABLE_PLAYGROUND", false),
+		EnablePlayground:         boolean("ENABLE_PLAYGROUND", true),
 		ComplexityLimit:          integer("GRAPHQL_COMPLEXITY_LIMIT", 5000),
 		NotificationPollInterval: duration("NOTIFICATION_POLL_INTERVAL", 3*time.Second),
 		Services: clients.Addrs{
