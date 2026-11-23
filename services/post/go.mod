@@ -5,12 +5,10 @@ go 1.25.8
 require (
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/consul/api v1.34.0
-	github.com/pact-foundation/pact-go/v2 v2.4.3
 	github.com/prometheus/client_golang v1.23.2
 	github.com/segmentio/kafka-go v0.4.50
 	google.golang.org/grpc v1.80.0
 	gorm.io/driver/postgres v1.6.0
-	gorm.io/driver/sqlite v1.6.0
 	gorm.io/gorm v1.31.1
 )
 
@@ -28,9 +26,7 @@ require (
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
 	github.com/hashicorp/go-version v1.9.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
-	github.com/hashicorp/logutils v1.0.0 // indirect
 	github.com/hashicorp/serf v0.10.1 // indirect
-	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/pgx/v5 v5.6.0 // indirect
@@ -40,16 +36,12 @@ require (
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/mattn/go-sqlite3 v1.14.22 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pierrec/lz4/v4 v4.1.15 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.66.1 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
-	github.com/spf13/afero v1.15.0 // indirect
-	github.com/spf13/cobra v1.10.2 // indirect
-	github.com/spf13/pflag v1.0.9 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	golang.org/x/crypto v0.48.0 // indirect
 	golang.org/x/exp v0.0.0-20260218203240-3dfff04db8fa // indirect
@@ -59,5 +51,4 @@ require (
 	golang.org/x/text v0.34.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260120221211-b8f7ae30c516 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

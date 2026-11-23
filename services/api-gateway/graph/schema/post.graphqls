@@ -1,0 +1,49 @@
+# ------------------------
+# Post Service
+# ------------------------
+
+extend type Query {
+  post(id: ID!): Post
+  postsByIds(ids: [ID!]!): [Post!]!
+  posts(limit: Int = 10): [Post!]!
+}
+
+extend type Mutation {
+  createPost(input: CreatePostInput!): Post!
+  createComment(input: CreateCommentInput!): Comment!
+  likePost(postId: ID!): Post!
+}
+
+type Post {
+  id: ID!
+  content: String!
+  createdAt: String!
+  UserId: ID!
+
+  # Resolved via Profile/Auth Service
+  author: User!
+
+  # Resolved via Post Service
+  comments(limit: Int = 10): [Comment!]!
+}
+
+type Comment {
+  id: ID!
+  postId: ID!
+  UserId: ID!
+  content: String!
+  createdAt: String!
+
+  author: User!
+}
+
+input CreatePostInput {
+  UserId: ID!
+  content: String!
+}
+
+input CreateCommentInput {
+  UserId: ID!
+  postId: ID!
+  content: String!
+}

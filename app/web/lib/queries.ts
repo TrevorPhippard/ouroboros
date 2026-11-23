@@ -42,6 +42,12 @@ export const UPDATE_PROFILE = gql`
       id
       headline
       about
+      username
+      displayName
+      avatarUrl
+      bio
+      followersCount
+      followingCount
     }
   }
 `
@@ -52,7 +58,7 @@ export const CREATE_POST = gql`
       id
       content
       createdAt
-      authorId
+      UserId
     }
   }
 `
@@ -63,7 +69,7 @@ export const LIKE_POST = gql`
       id
       content
       createdAt
-      authorId
+      UserId
     }
   }
 `
@@ -104,9 +110,13 @@ export const SEND_CONNECT = gql`
 export const SIGN_UP = gql`
   mutation SignUp($input: SignUpInput!) {
     signUp(input: $input) {
-      id
-      displayName
-      email
+      token
+      user {
+        id
+        email
+        username
+        displayName
+      }
     }
   }
 `

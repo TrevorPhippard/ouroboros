@@ -36,6 +36,9 @@
 
 Ouroboros is a modern social platform designed to remove algorithmic manipulation and bring back intentional, human-centered interaction.
 
+## Not implemented at all but would like to still call out
+Dataloader + Outbox pattern for EDA
+
 ---
 
 ## Why This Exists
@@ -82,6 +85,7 @@ Environment variables configured: Set all required environment variables
 ## Quick Start
 
 ```bash
+./app/web/ npm i
 docker-compose up --build
 ```
 
@@ -92,7 +96,7 @@ For a testable feed on startup, set `SEED_MOCK_FEED=true` for `feed-service`. Wh
 | Service            | URL                                     |
 | ------------------ | --------------------------------------- |
 | Frontend           | <http://localhost:3000>                 |
-| GraphQL Playground | <http://localhost:4000/graphql>         |
+| GraphQL Playground | <http://localhost:4000>         |
 | pgAdmin            | <http://localhost:8083/browser>         |
 | Consul             | <http://localhost:8500/ui/dc1/services> |
 | Prometheus         | <http://localhost:9090/query>           |
@@ -278,14 +282,8 @@ Typical variables:
 
 MIT
 
-### citations
+### Citations
 
-accessed 17 April 2026.
-
-'Social Media Addiction and Poor Mental Health: Examining the Mediating Roles of Internet Addiction and Phubbing', PubMed (2023) <https://pubmed.ncbi.nlm.nih.gov/36972903/>
-accessed 17 April 2026.
-
-'The echo chamber effect on social media', Proceedings of the National Academy of Sciences (2021) <https://pmc.ncbi.nlm.nih.gov/articles/PMC7936330/>
 accessed 17 April 2026.
 
 'Social Media Addiction and Poor Mental Health: Examining the Mediating Roles of Internet Addiction and Phubbing', PubMed (2023) <https://pubmed.ncbi.nlm.nih.gov/36972903/>

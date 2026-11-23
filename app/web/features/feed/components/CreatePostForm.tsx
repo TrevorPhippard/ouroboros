@@ -35,7 +35,7 @@ export const CreatePostForm = () => {
         query: CREATE_POST,
         variables: {
           input: {
-            authorId: userId,
+            UserId: userId,
             content: data.content,
           },
         },

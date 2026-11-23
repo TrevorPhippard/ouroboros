@@ -17,7 +17,7 @@ export default function CreatePost() {
         query: CREATE_POST,
         variables: {
           input: {
-            authorId: userId,
+            UserId: userId,
             content,
           },
         },

@@ -1,0 +1,40 @@
+# ------------------------
+# Profile Service
+# ------------------------
+
+extend type Query {
+  profile(userId: ID!): Profile
+  profiles(userIds: [ID!]!): [Profile!]!
+}
+
+extend type Mutation {
+  updateProfile(userId: ID!, input: UpdateProfileInput!): Profile!
+}
+
+type Profile {
+  id: ID!
+  userId: ID!
+  headline: String
+  about: String
+  displayName: String
+  avatarUrl: String
+  bio: String
+  experiences: [Experience!]!
+}
+
+type Experience {
+  id: ID!
+  title: String!
+  company: String!
+  startDate: String!
+  endDate: String
+  description: String!
+}
+
+input UpdateProfileInput {
+  headline: String
+  about: String
+  displayName: String
+  avatarUrl: String
+  bio: String
+}

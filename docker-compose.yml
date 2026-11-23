@@ -171,9 +171,9 @@ services:
     networks:
       - mesh
 
-  # ==========================================
+  # =============================================
   # gRPC MICROSERVICES (Now built via Dockerfile)
-  # ==========================================
+  # =============================================
   auth-service:
     build:
       context: .
@@ -184,6 +184,7 @@ services:
     environment:
       - DB_URL=postgres://admin:password@postgres:5432/ouroboros?sslmode=disable
       - KAFKA_BROKER=kafka:9092
+      - JWT_SECRET=jwtsecret
     ports:
       - "50053:50053"
     depends_on:
@@ -310,7 +311,6 @@ services:
       dockerfile: Dockerfile
       args:
         SERVICE_DIR: api-gateway
-
     container_name: ouroboros_gateway
     ports:
       - "4000:4000"
@@ -323,6 +323,7 @@ services:
       - POST_SERVICE_URL=ouroboros_post:50057
       - PROFILE_SERVICE_URL=ouroboros_profile:50058
       - KAFKA_BROKER=kafka:9092
+      - JWT_SECRET=jwtsecret
     depends_on:
       - auth-service
       - connection-service

@@ -24,16 +24,16 @@ type PostCreatedEvent struct {
 	Type      string    `json:"type"`
 	Timestamp time.Time `json:"timestamp"`
 	Data      struct {
-		PostID   string `json:"postId"`
-		AuthorID string `json:"authorId"`
-		Content  string `json:"content"`
+		PostID  string `json:"postId"`
+		UserId  string `json:"UserId"`
+		Content string `json:"content"`
 	} `json:"data"`
 }
 
 func (s *PostServiceServer) CreatePost(ctx context.Context, req *pb.CreatePostRequest) (*pb.Post, error) {
 	post := &models.DBPost{
 		ID:        uuid.NewString(),
-		AuthorID:  req.AuthorId,
+		UserId:    req.AuthorId,
 		Content:   req.Content,
 		CreatedAt: time.Now().UTC(),
 	}
@@ -49,14 +49,14 @@ func (s *PostServiceServer) CreatePost(ctx context.Context, req *pb.CreatePostRe
 		Timestamp: time.Now().UTC(),
 	}
 	event.Data.PostID = post.ID
-	event.Data.AuthorID = post.AuthorID
+	event.Data.UserId = post.UserId
 	event.Data.Content = post.Content
 
 	value, _ := json.Marshal(event)
 
 	// Publish to Kafka
 	err := s.Writer.WriteMessages(ctx, kafka.Message{
-		Key:   []byte(post.AuthorID),
+		Key:   []byte(post.UserId),
 		Value: value,
 	})
 
@@ -66,7 +66,7 @@ func (s *PostServiceServer) CreatePost(ctx context.Context, req *pb.CreatePostRe
 
 	return &pb.Post{
 		Id:        post.ID,
-		AuthorId:  post.AuthorID,
+		AuthorId:  post.UserId,
 		Content:   post.Content,
 		CreatedAt: post.CreatedAt.Format(time.RFC3339),
 	}, nil
@@ -81,7 +81,7 @@ func (s *PostServiceServer) GetPost(ctx context.Context, req *pb.GetPostRequest)
 
 	return &pb.Post{
 		Id:        post.ID,
-		AuthorId:  post.AuthorID,
+		AuthorId:  post.UserId,
 		Content:   post.Content,
 		CreatedAt: post.CreatedAt.Format(time.RFC3339),
 	}, nil
@@ -100,7 +100,7 @@ func (s *PostServiceServer) GetPosts(ctx context.Context, req *pb.GetPostsByIdsR
 	for _, p := range dbPosts {
 		pbPosts = append(pbPosts, &pb.Post{
 			Id:        p.ID,
-			AuthorId:  p.AuthorID,
+			AuthorId:  p.UserId,
 			Content:   p.Content,
 			CreatedAt: p.CreatedAt.Format(time.RFC3339),
 		})

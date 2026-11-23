@@ -1,0 +1,28 @@
+# ------------------------
+# Notification Service
+# ------------------------
+
+extend type Query {
+  notifications(userId: ID!, limit: Int = 20): [Notification!]!
+}
+
+extend type Mutation {
+  markNotificationRead(id: ID!): Boolean!
+}
+
+extend type Subscription {
+  notificationReceived(userId: ID!): Notification!
+}
+
+type Notification {
+  id: ID!
+  userId: ID!
+  type: String!
+  actorId: ID!
+  entityId: ID
+  createdAt: String!
+  read: Boolean!
+
+  # Resolved via Auth/Profile Service
+  actor: User
+}

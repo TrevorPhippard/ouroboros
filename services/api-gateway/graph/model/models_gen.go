@@ -10,10 +10,9 @@ type AuthPayload struct {
 type Comment struct {
 	ID        string `json:"id"`
 	PostID    string `json:"postId"`
-	AuthorID  string `json:"authorId"`
+	UserID    string `json:"UserId"`
 	Content   string `json:"content"`
 	CreatedAt string `json:"createdAt"`
-	Author    *User  `json:"author"`
 }
 
 type ConnectResponse struct {
@@ -21,32 +20,33 @@ type ConnectResponse struct {
 }
 
 type CreateCommentInput struct {
-	AuthorID string `json:"authorId"`
-	PostID   string `json:"postId"`
-	Content  string `json:"content"`
+	UserID  string `json:"UserId"`
+	PostID  string `json:"postId"`
+	Content string `json:"content"`
 }
 
 type CreatePostInput struct {
-	AuthorID string `json:"authorId"`
-	Content  string `json:"content"`
+	UserID  string `json:"UserId"`
+	Content string `json:"content"`
 }
 
 type Experience struct {
-	ID        string  `json:"id"`
-	Title     string  `json:"title"`
-	Company   string  `json:"company"`
-	StartDate string  `json:"startDate"`
-	EndDate   *string `json:"endDate,omitempty"`
+	ID          string  `json:"id"`
+	Title       string  `json:"title"`
+	Company     string  `json:"company"`
+	StartDate   string  `json:"startDate"`
+	EndDate     *string `json:"endDate,omitempty"`
+	Description string  `json:"description"`
 }
 
 type FeedItem struct {
 	PostID string `json:"postId"`
 	Cursor string `json:"cursor"`
-	Post   *Post  `json:"post,omitempty"`
 }
 
 type FeedResponse struct {
-	Items []*FeedItem `json:"items"`
+	Items      []*FeedItem `json:"items"`
+	NextCursor *string     `json:"nextCursor,omitempty"`
 }
 
 type Mutation struct {
@@ -60,22 +60,23 @@ type Notification struct {
 	EntityID  *string `json:"entityId,omitempty"`
 	CreatedAt string  `json:"createdAt"`
 	Read      bool    `json:"read"`
-	Actor     *User   `json:"actor,omitempty"`
 }
 
 type Post struct {
-	ID        string     `json:"id"`
-	Content   string     `json:"content"`
-	CreatedAt string     `json:"createdAt"`
-	AuthorID  string     `json:"authorId"`
-	Author    *User      `json:"author"`
-	Comments  []*Comment `json:"comments"`
+	ID        string `json:"id"`
+	Content   string `json:"content"`
+	CreatedAt string `json:"createdAt"`
+	UserID    string `json:"UserId"`
 }
 
 type Profile struct {
 	ID          string        `json:"id"`
+	UserID      string        `json:"userId"`
 	Headline    *string       `json:"headline,omitempty"`
 	About       *string       `json:"about,omitempty"`
+	DisplayName *string       `json:"displayName,omitempty"`
+	AvatarURL   *string       `json:"avatarUrl,omitempty"`
+	Bio         *string       `json:"bio,omitempty"`
 	Experiences []*Experience `json:"experiences"`
 }
 
@@ -101,8 +102,11 @@ type Subscription struct {
 }
 
 type UpdateProfileInput struct {
-	Headline *string `json:"headline,omitempty"`
-	About    *string `json:"about,omitempty"`
+	Headline    *string `json:"headline,omitempty"`
+	About       *string `json:"about,omitempty"`
+	DisplayName *string `json:"displayName,omitempty"`
+	AvatarURL   *string `json:"avatarUrl,omitempty"`
+	Bio         *string `json:"bio,omitempty"`
 }
 
 type User struct {
@@ -115,5 +119,4 @@ type User struct {
 	FollowersCount int32   `json:"followersCount"`
 	FollowingCount int32   `json:"followingCount"`
 	IsFollowing    bool    `json:"isFollowing"`
-	Posts          []*Post `json:"posts"`
 }

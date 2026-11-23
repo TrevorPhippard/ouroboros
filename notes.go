@@ -103,9 +103,6 @@ mutation CreatePost($input: CreatePostInput!) {
 }
 
 
-{
-  "input": {
-    "authorId": "USER_ID_HERE",
-    "content": "Post created with variables"
-  }
-}
+Puppachino
+pup@pupmail.com
+Arf1001!

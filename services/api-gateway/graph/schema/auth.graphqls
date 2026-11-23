@@ -1,0 +1,29 @@
+# ------------------------
+# Auth Service
+# ------------------------
+
+extend type Mutation {
+  signUp(input: SignUpInput!): AuthPayload!
+  signIn(input: SignInInput!): AuthPayload!
+  signOut: SignOutResponse!
+}
+
+type AuthPayload {
+  token: String!
+  user: User!
+}
+
+type SignOutResponse {
+  success: Boolean!
+}
+
+input SignUpInput {
+  email: String!
+  password: String!
+  displayName: String!
+}
+
+input SignInInput {
+  email: String!
+  password: String!
+}

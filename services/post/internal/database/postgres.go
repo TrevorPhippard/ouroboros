@@ -48,13 +48,13 @@ func SeedDB(db *gorm.DB) {
 	posts := []models.DBPost{
 		{
 			ID:        "post-1",
-			AuthorID:  "user-1",
+			UserId:    "user-1",
 			Content:   "Hello world!",
 			CreatedAt: time.Now(),
 		},
 		{
 			ID:        "post-2",
-			AuthorID:  "user-2",
+			UserId:    "user-2",
 			Content:   "Second post 🚀",
 			CreatedAt: time.Now(),
 		},
@@ -64,14 +64,14 @@ func SeedDB(db *gorm.DB) {
 		{
 			ID:        "comment-1",
 			PostID:    "post-1",
-			AuthorID:  "user-2",
+			UserId:    "user-2",
 			Content:   "Nice post!",
 			CreatedAt: time.Now(),
 		},
 		{
 			ID:        "comment-2",
 			PostID:    "post-1",
-			AuthorID:  "user-3",
+			UserId:    "user-3",
 			Content:   "Agreed 👍",
 			CreatedAt: time.Now(),
 		},

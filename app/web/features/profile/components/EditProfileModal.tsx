@@ -1,122 +1,117 @@
 "use client"
 
+import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Camera, X } from "lucide-react"
-import { ProfileType, profileSchema } from "../schemas"
+import { X } from "lucide-react"
+import { profileFormSchema, type ProfileFormValues, type ProfileUpdateInput } from "../schemas"
 import { useUpdateProfile } from "../hooks/useUpdateProfile"
-import { useState } from "react"
+import FileUploadField, { type UploadedImage } from "./FileUploadField"
+
+type EditableProfileData = {
+  displayName: string | null
+  headline: string | null
+  about: string | null
+  bio: string | null
+  avatarUrl: string | null
+}
 
 export const EditProfileModal = ({
   initialData,
   onClose,
+  userId,
 }: {
-  initialData: ProfileType
+  initialData: EditableProfileData
   onClose: () => void
+  userId?: string
 }) => {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const { mutateAsync: updateProfile, isPending } = useUpdateProfile()
+  const [uploadedAvatar, setUploadedAvatar] = useState<UploadedImage | null>(null)
+  const [saveError, setSaveError] = useState("")
+  const { mutateAsync: updateProfile, isPending } = useUpdateProfile(userId)
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
-  } = useForm<ProfileType>({
-    resolver: zodResolver(profileSchema),
-    defaultValues: initialData,
+    formState: { errors, dirtyFields },
+  } = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileFormSchema),
+    defaultValues: {
+      displayName: initialData.displayName ?? "",
+      headline: initialData.headline ?? "",
+      about: initialData.about ?? "",
+      bio: initialData.bio ?? "",
+    },
   })
 
-  const onSubmit = async (data: ProfileType) => {
-    await updateProfile({ data, avatarFile: selectedFile || undefined })
-    onClose()
+  const onSubmit = async (data: ProfileFormValues) => {
+    setSaveError("")
+    const updates: ProfileUpdateInput = {}
+    // Only send fields the user changed. The supplied schema cannot read
+    // Profile-only fields on page load, so submitting untouched empty defaults
+    // would accidentally clear values already stored by the backend.
+    if (dirtyFields.displayName) updates.displayName = data.displayName?.trim() || null
+    if (dirtyFields.headline) updates.headline = data.headline?.trim() || null
+    if (dirtyFields.about) updates.about = data.about?.trim() || null
+    if (dirtyFields.bio) updates.bio = data.bio?.trim() || null
+    if (uploadedAvatar) updates.avatarUrl = uploadedAvatar.url
+
+    if (Object.keys(updates).length === 0) {
+      onClose()
+      return
+    }
+
+    try {
+      await updateProfile(updates)
+      onClose()
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Could not save your profile.")
+    }
   }
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-2xl overflow-hidden rounded-xl bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b px-6 py-4">
-          <h2 className="text-xl font-semibold">Edit intro</h2>
-          <button
-            onClick={onClose}
-            className="rounded-full p-1 hover:bg-gray-100"
-          >
+          <h2 className="text-xl font-semibold">Edit profile</h2>
+          <button type="button" onClick={onClose} aria-label="Close edit profile" className="rounded-full p-1 hover:bg-gray-100">
             <X />
           </button>
         </div>
 
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="max-h-[80vh] space-y-4 overflow-y-auto p-6"
-        >
-          {/* Avatar Upload Mock */}
-          <div
-            className="group relative h-24 w-24 cursor-pointer"
-            onClick={() => document.getElementById("avatar-input")?.click()}
-          >
-            <img
-              src={
-                selectedFile
-                  ? URL.createObjectURL(selectedFile)
-                  : initialData.avatarUrl
-              }
-              className="h-full w-full rounded-full border-4 border-white object-cover shadow"
-              alt="Avatar"
-            />
-            <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/30 opacity-0 transition-opacity group-hover:opacity-100">
-              <Camera className="h-8 w-8 text-white" />
-            </div>
-            <input
-              id="avatar-input"
-              type="file"
-              hidden
-              accept="image/*"
-              onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="mb-1 block text-sm text-gray-600">
-                First name*
-              </label>
-              <input
-                {...register("firstName")}
-                className="w-full rounded border border-gray-400 px-3 py-1.5 outline-none focus:border-black"
-              />
-              {errors.firstName && (
-                <p className="mt-1 text-xs text-red-600">
-                  {errors.firstName.message}
-                </p>
-              )}
-            </div>
-            <div>
-              <label className="mb-1 block text-sm text-gray-600">
-                Last name*
-              </label>
-              <input
-                {...register("lastName")}
-                className="w-full rounded border border-gray-400 px-3 py-1.5 outline-none focus:border-black"
-              />
-            </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="max-h-[80vh] space-y-4 overflow-y-auto p-6">
+          <div>
+            <label className="mb-1 block text-sm text-gray-600">Profile avatar</label>
+            <FileUploadField initialValue={initialData.avatarUrl} onUploadComplete={setUploadedAvatar} />
           </div>
 
           <div>
-            <label className="mb-1 block text-sm text-gray-600">
-              Headline*
-            </label>
-            <textarea
-              {...register("headline")}
-              rows={2}
-              className="w-full resize-none rounded border border-gray-400 px-3 py-1.5 outline-none focus:border-black"
-            />
+            <label className="mb-1 block text-sm text-gray-600">Display name</label>
+            <input {...register("displayName")} className="w-full rounded border border-gray-400 px-3 py-1.5 outline-none focus:border-black" />
+            {errors.displayName && <p className="mt-1 text-xs text-red-600">{errors.displayName.message}</p>}
           </div>
 
+          <div>
+            <label className="mb-1 block text-sm text-gray-600">Headline</label>
+            <input {...register("headline")} className="w-full rounded border border-gray-400 px-3 py-1.5 outline-none focus:border-black" />
+            {errors.headline && <p className="mt-1 text-xs text-red-600">{errors.headline.message}</p>}
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm text-gray-600">Bio</label>
+            <textarea {...register("bio")} rows={3} className="w-full resize-y rounded border border-gray-400 px-3 py-1.5 outline-none focus:border-black" />
+            {errors.bio && <p className="mt-1 text-xs text-red-600">{errors.bio.message}</p>}
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm text-gray-600">About</label>
+            <textarea {...register("about")} rows={4} className="w-full resize-y rounded border border-gray-400 px-3 py-1.5 outline-none focus:border-black" />
+            {errors.about && <p className="mt-1 text-xs text-red-600">{errors.about.message}</p>}
+          </div>
+
+          {saveError && <p role="alert" className="text-sm text-red-600">{saveError}</p>}
+
           <div className="flex justify-end border-t pt-4">
-            <button
-              type="submit"
-              disabled={isPending}
-              className="rounded-full bg-[#0a66c2] px-6 py-1.5 font-semibold text-white transition-colors hover:bg-[#004182] disabled:opacity-50"
-            >
+            <button type="submit" disabled={isPending} className="rounded-full bg-[#0a66c2] px-6 py-1.5 font-semibold text-white transition-colors hover:bg-[#004182] disabled:opacity-50">
               {isPending ? "Saving..." : "Save"}
             </button>
           </div>

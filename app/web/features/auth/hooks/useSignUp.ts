@@ -4,11 +4,15 @@ import { gqlRequest } from "@/services/graphql/client"
 import { SIGN_UP } from "@/lib/queries"
 import { useRouter } from "next/navigation"
 
-type SignUpResponse = {
+export type SignUpResponse = {
   signUp: {
-    id: string
-    displayName: string
-    email: string
+    token: string
+    user: {
+      id: string
+      email: string
+      username: string
+      displayName: string
+    }
   }
 }
 
@@ -17,8 +21,9 @@ export function useSignUp() {
   const router = useRouter()
 
   return useMutation<SignUpResponse, Error, SignUpValues>({
-    mutationFn: async (data: SignUpValues) => {
+    mutationFn: async (data) => {
       const { confirmPassword: _confirmPassword, name, ...rest } = data
+
       return gqlRequest({
         query: SIGN_UP,
         variables: {
@@ -29,9 +34,12 @@ export function useSignUp() {
         },
       })
     },
+
     retry: false,
+
     onSuccess: (data) => {
-      queryClient.setQueryData(["user-session"], data)
+      // Registration succeeded. Redirect to login.
+      queryClient.invalidateQueries({ queryKey: ["user-session"] })
       router.push("/login")
     },
   })

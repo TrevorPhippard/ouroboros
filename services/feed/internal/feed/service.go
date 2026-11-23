@@ -26,7 +26,7 @@ func (s *Service) HandlePostCreated(ctx context.Context, event PostCreatedEvent)
 		PostId: event.Data.PostID,
 		Post: &pbFeed.Post{
 			Id:        event.Data.PostID,
-			AuthorId:  event.Data.AuthorID,
+			AuthorId:  event.Data.UserId,
 			Content:   event.Data.Content,
 			Timestamp: event.Timestamp,
 		},
@@ -38,12 +38,12 @@ func (s *Service) HandlePostCreated(ctx context.Context, event PostCreatedEvent)
 	}
 
 	if job == nil {
-		followers, _ := s.social.GetFollowers(ctx, event.Data.AuthorID)
+		followers, _ := s.social.GetFollowers(ctx, event.Data.UserId)
 
 		job = &FanoutJob{
 			EventID:   event.EventID,
 			PostID:    event.Data.PostID,
-			AuthorID:  event.Data.AuthorID,
+			UserId:    event.Data.UserId,
 			Followers: followers,
 			BatchSize: 100,
 			Completed: make(map[int]bool),
@@ -53,14 +53,63 @@ func (s *Service) HandlePostCreated(ctx context.Context, event PostCreatedEvent)
 	return s.fanout.Run(ctx, s.store, job, item)
 }
 
-func (s *Service) GetFeed(ctx context.Context, req *pbFeed.GetFeedRequest) (*pbFeed.GetFeedResponse, error) {
-	items, next, err := s.store.GetFeed(ctx, req.UserId, req.Cursor, int64(req.Limit))
-	if err != nil {
-		return nil, err
+func (s *Service) GetFeed(
+	ctx context.Context,
+	req *pbFeed.GetFeedRequest,
+) (*pbFeed.GetFeedResponse, error) {
+	// Dummy feed data for development/testing.
+	items := []*pbFeed.FeedItem{
+		{
+			PostId: "post-1",
+			Cursor: "cursor-001",
+		},
+		{
+			PostId: "post-2",
+			Cursor: "cursor-002",
+		},
+		{
+			PostId: "post-3",
+			Cursor: "cursor-003",
+		},
+	}
+
+	// Basic cursor pagination.
+	start := 0
+	if req.Cursor != "" {
+		for i, item := range items {
+			if item.Cursor == req.Cursor {
+				start = i + 1
+				break
+			}
+		}
+	}
+
+	limit := int(req.Limit)
+	if limit <= 0 {
+		limit = 10
+	}
+
+	if start >= len(items) {
+		return &pbFeed.GetFeedResponse{
+			Items:      []*pbFeed.FeedItem{},
+			NextCursor: "",
+		}, nil
+	}
+
+	end := start + limit
+	if end > len(items) {
+		end = len(items)
+	}
+
+	page := items[start:end]
+
+	nextCursor := ""
+	if end < len(items) {
+		nextCursor = items[end-1].Cursor
 	}
 
 	return &pbFeed.GetFeedResponse{
-		Items:      items,
-		NextCursor: next,
+		Items:      page,
+		NextCursor: nextCursor,
 	}, nil
 }

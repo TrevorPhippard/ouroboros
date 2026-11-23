@@ -3,11 +3,11 @@ module auth
 go 1.25.8
 
 require (
-	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/consul/api v1.34.0
 	github.com/segmentio/kafka-go v0.4.51
 	golang.org/x/crypto v0.50.0
+	golang.org/x/sync v0.20.0
 	google.golang.org/grpc v1.79.3
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.31.1
@@ -29,7 +29,6 @@ require (
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.9.1 // indirect
 	github.com/prometheus/procfs v0.0.8 // indirect
-	golang.org/x/sync v0.20.0 // indirect
 )
 
 require (
