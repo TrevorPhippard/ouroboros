@@ -36,6 +36,9 @@
 
 Ouroboros is a modern social platform designed to remove algorithmic manipulation and bring back intentional, human-centered interaction.
 
+## Not implemented at all but would like to still call out
+Dataloader + Outbox pattern for EDA
+
 ---
 
 ## Why This Exists
@@ -93,7 +96,7 @@ For a testable feed on startup, set `SEED_MOCK_FEED=true` for `feed-service`. Wh
 | Service            | URL                                     |
 | ------------------ | --------------------------------------- |
 | Frontend           | <http://localhost:3000>                 |
-| GraphQL Playground | <http://localhost:4000/graphql>         |
+| GraphQL Playground | <http://localhost:4000>         |
 | pgAdmin            | <http://localhost:8083/browser>         |
 | Consul             | <http://localhost:8500/ui/dc1/services> |
 | Prometheus         | <http://localhost:9090/query>           |

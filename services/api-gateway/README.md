@@ -125,7 +125,31 @@ to enable them with `-tags postext` (adapter: `internal/catalog/grpc.go`).
 
 ## Verification status
 
-`go vet`, `gofmt` and `go test -race ./...` pass (including end-to-end tests through the
-generated schema) in a scratch module where `ouroboros/proto/generated/*` was replaced by
-minimal stand-ins mirroring only the fields this gateway uses. The real generated
-packages were not available, so run the build and tests once in the full workspace.
+The gateway was source-checked with `gofmt`. A complete build/test could not be run in this environment: the declared Go 1.25.8 toolchain was not available locally and toolchain downloads are blocked, and this archive omits the imported generated protobuf packages.
+
+
+
+
+## Playground Examples
+```
+mutation signIn($input: SignInInput!) {
+  signIn(input: $input) {
+    token
+    user {
+      id
+      email
+      username
+      displayName
+    }
+  }
+}
+
+
+{
+  "input": {
+    "email": "user1@example.com",
+    "password": "user1user1"
+  }
+}
+```
+
