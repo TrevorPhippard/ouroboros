@@ -13,6 +13,7 @@ export const ProfileView = ({ userId }: { userId: string }) => {
     isPending: isSavingAvatar,
     error: avatarSaveError,
   } = useUpdateProfile(userId)
+
   const [avatar, setAvatar] = useState<UploadedImage | null>(null)
 
   if (isLoading) return <ProfileSkeleton />
@@ -39,7 +40,10 @@ export const ProfileView = ({ userId }: { userId: string }) => {
         <div className="relative h-32 bg-slate-300">
           <div className="absolute -bottom-12 left-6 h-24 w-24 overflow-hidden rounded-full border-4 border-white bg-white shadow-sm">
             <img
-              src={profile.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.id}`}
+              src={
+                profile.avatarUrl ||
+                `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.id}`
+              }
               alt="Profile avatar"
               className="h-full w-full object-cover"
             />
@@ -64,7 +68,8 @@ export const ProfileView = ({ userId }: { userId: string }) => {
           />
 
           <p className="text-sm text-gray-500">
-            {profile.followingCount} following{" • "}{profile.followersCount} followers
+            {profile.followingCount} following{" • "}
+            {profile.followersCount} followers
           </p>
         </div>
       </div>
@@ -82,7 +87,9 @@ export const ProfileView = ({ userId }: { userId: string }) => {
       </div>
 
       <div className="space-y-4 rounded-lg bg-white p-6 shadow">
-        <h2 className="text-xl font-semibold text-gray-900">Profile settings</h2>
+        <h2 className="text-xl font-semibold text-gray-900">
+          Profile settings
+        </h2>
         <form onSubmit={saveAvatar}>
           <label className="mb-2 block font-medium">Profile avatar</label>
           <FileUploadField
@@ -91,7 +98,9 @@ export const ProfileView = ({ userId }: { userId: string }) => {
           />
 
           {avatarSaveError && (
-            <p role="alert" className="mt-2 text-sm text-red-600">{avatarSaveError.message}</p>
+            <p role="alert" className="mt-2 text-sm text-red-600">
+              {avatarSaveError.message}
+            </p>
           )}
 
           <button

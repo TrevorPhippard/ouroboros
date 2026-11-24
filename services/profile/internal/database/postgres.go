@@ -27,9 +27,14 @@ func Connect(dbURL string) *gorm.DB {
 }
 
 func Migrate(db *gorm.DB) {
-	if err := db.AutoMigrate(&models.Profile{}); err != nil {
+	if err := db.AutoMigrate(
+		&models.Profile{},
+		&models.Experience{},
+	); err != nil {
 		log.Fatalf("migration failed: %v", err)
 	}
+
+	log.Println("Database migrations completed successfully")
 }
 
 func SeedDB(db *gorm.DB) {

@@ -55,7 +55,9 @@ func (d Deps) fetchUsers(ctx context.Context, ids []string) (map[string]*model.U
 }
 
 // applyProfiles overlays profile fields. A profile outage degrades the result
-// (no display name / avatar / bio) instead of failing the whole lookup.
+// (no
+//
+//	/ avatar / bio) instead of failing the whole lookup.
 func (d Deps) applyProfiles(ctx context.Context, users map[string]*model.User, ids []string) {
 	res, err := d.Clients.Profile.GetProfilesByUserIds(ctx, &profilepb.GetProfilesByUserIdsRequest{UserIds: ids})
 	if err != nil {

@@ -12,7 +12,7 @@ type Profile struct {
 	Bio         string       `gorm:"type:text;not null"`
 	Headline    string       `gorm:"type:text"`
 	About       string       `gorm:"type:text"`
-	Experiences []Experience `gorm:"foreignKey:ProfileID"`
+	Experiences []Experience `gorm:"foreignKey:ProfileID;references:ID"`
 	CreatedAt   time.Time    `gorm:"default:CURRENT_TIMESTAMP"`
 }
 

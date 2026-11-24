@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useUpdateProfile } from "../hooks/useUpdateProfile"
 import type { ProfileUpdateInput } from "../schemas"
 
@@ -53,7 +53,9 @@ export const EditableField = ({
       setDraft("")
       setSaveError("")
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : "Could not save this field.")
+      setSaveError(
+        error instanceof Error ? error.message : "Could not save this field."
+      )
     }
   }
 
@@ -95,7 +97,11 @@ export const EditableField = ({
             />
           )}
 
-          {saveError && <p role="alert" className="text-sm text-red-600">{saveError}</p>}
+          {saveError && (
+            <p role="alert" className="text-sm text-red-600">
+              {saveError}
+            </p>
+          )}
 
           <div className="flex gap-2">
             <button

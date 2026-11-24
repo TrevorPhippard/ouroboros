@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query"
 import { gqlRequest } from "@/services/graphql/client"
-import { GET_PROFILE } from "../api/profileQueries"
-import type { ProfileViewModel, UserProfileData } from "../schemas"
+import { GET_PROFILE } from "@/lib/queries"
+import type { ProfileViewModel } from "../schemas"
 
 type GetProfileResponse = {
-  user: UserProfileData | null
+  profile: ProfileViewModel | null
 }
 
 export const useProfile = (userId: string) => {
@@ -14,27 +14,26 @@ export const useProfile = (userId: string) => {
     queryFn: async () => {
       const response = (await gqlRequest({
         query: GET_PROFILE,
-        variables: { id: userId },
+        variables: { userId },
       })) as GetProfileResponse
 
-      const user = response.user
-      if (!user) throw new Error("Profile not found")
+      const profile = response.profile
+
+      if (!profile) throw new Error("Profile not found")
 
       return {
-        id: user.id,
-        userId: user.id,
-        username: user.username,
-        displayName: user.displayName,
-        avatarUrl: user.avatarUrl,
-        bio: user.bio,
-        followersCount: user.followersCount,
-        followingCount: user.followingCount,
-        isFollowing: user.isFollowing,
-        // These fields belong to GraphQL `Profile`, but the supplied schema
-        // does not expose a query that can read a Profile.
-        headline: null,
-        about: null,
-        experiences: [],
+        id: profile.id,
+        userId: profile.userId,
+        username: profile.displayName ?? profile.userId,
+        displayName: profile.displayName,
+        avatarUrl: profile.avatarUrl,
+        bio: profile.bio,
+        headline: profile.headline,
+        about: profile.about,
+        experiences: profile.experiences ?? [],
+        followersCount: profile.followersCount ?? 0,
+        followingCount: profile.followingCount ?? 0,
+        isFollowing: profile.isFollowing ?? false,
       }
     },
     staleTime: 1000 * 60 * 5,

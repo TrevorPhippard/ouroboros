@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { gqlRequest } from "@/services/graphql/client"
-import { FOLLOW_USER, UNFOLLOW_USER } from "../api/profileQueries"
+import { FOLLOW_USER, UNFOLLOW_USER } from "@/lib/queries"
 import type { ProfileViewModel } from "../schemas"
 
 type ConnectResponse = { success: boolean }
@@ -29,13 +29,18 @@ export const useToggleFollow = (targetUserId: string) => {
         : (response as UnfollowResponse).unfollowUser
 
       if (!result?.success) {
-        throw new Error(shouldFollow ? "Could not follow this user." : "Could not unfollow this user.")
+        throw new Error(
+          shouldFollow
+            ? "Could not follow this user."
+            : "Could not unfollow this user."
+        )
       }
     },
 
     onMutate: async (shouldFollow) => {
       await queryClient.cancelQueries({ queryKey })
-      const previousProfile = queryClient.getQueryData<ProfileViewModel>(queryKey)
+      const previousProfile =
+        queryClient.getQueryData<ProfileViewModel>(queryKey)
 
       if (previousProfile) {
         queryClient.setQueryData<ProfileViewModel>(queryKey, {
@@ -43,7 +48,7 @@ export const useToggleFollow = (targetUserId: string) => {
           isFollowing: shouldFollow,
           followersCount: Math.max(
             0,
-            previousProfile.followersCount + (shouldFollow ? 1 : -1),
+            previousProfile.followersCount + (shouldFollow ? 1 : -1)
           ),
         })
       }
