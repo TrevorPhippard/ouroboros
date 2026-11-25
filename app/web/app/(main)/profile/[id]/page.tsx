@@ -3,6 +3,7 @@ import { getQueryClient } from "@/lib/getQueryClient"
 import { gqlRequest } from "@/services/graphql/client"
 import { ProfileView } from "@/features/profile/components/ProfileView"
 import { GET_PROFILE } from "@/lib/queries"
+import { getProfile } from "@/features/profile/api/getProfile"
 
 // 1. Update the type definition so TypeScript knows params is a Promise
 type Props = {
@@ -19,11 +20,7 @@ export default async function UserProfilePage({ params }: Props) {
   // 3. Use the unwrapped userId for your query prefetching
   await queryClient.prefetchQuery({
     queryKey: ["profile", userId],
-    queryFn: () =>
-      gqlRequest({
-        query: GET_PROFILE,
-        variables: { userId },
-      }),
+    queryFn: () => getProfile(userId),
   })
 
   return (

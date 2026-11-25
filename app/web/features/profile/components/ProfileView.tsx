@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, type FormEvent } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 import { useProfile } from "../hooks/useProfile"
 import { useUpdateProfile } from "../hooks/useUpdateProfile"
 import { EditableField } from "./EditableField"
 import FileUploadField, { type UploadedImage } from "./FileUploadField"
+import { useQueryClient } from "@tanstack/react-query"
 
 export const ProfileView = ({ userId }: { userId: string }) => {
   const { data: profile, isLoading, isError } = useProfile(userId)
@@ -14,11 +15,26 @@ export const ProfileView = ({ userId }: { userId: string }) => {
     error: avatarSaveError,
   } = useUpdateProfile(userId)
 
+  const queryClient = useQueryClient()
+
+  useEffect(() => {
+    const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
+      if (event.query.queryKey[0] === "profile") {
+        console.log("PROFILE CACHE EVENT:", event.type)
+        console.log("CACHE DATA:", event.query.state.data)
+      }
+    })
+
+    return unsubscribe
+  }, [queryClient])
+
   const [avatar, setAvatar] = useState<UploadedImage | null>(null)
 
-  if (isLoading) return <ProfileSkeleton />
+  if (isLoading || !profile) {
+    return <ProfileSkeleton />
+  }
 
-  if (isError || !profile) {
+  if (isError) {
     return <div className="p-4 text-red-500">Failed to load profile.</div>
   }
 
@@ -33,7 +49,7 @@ export const ProfileView = ({ userId }: { userId: string }) => {
       // React Query exposes the error above so the user can retry.
     }
   }
-
+  console.log(profile)
   return (
     <div className="mx-auto max-w-4xl space-y-6 py-8">
       <div className="overflow-hidden rounded-lg bg-white shadow">
@@ -55,7 +71,7 @@ export const ProfileView = ({ userId }: { userId: string }) => {
             userId={userId}
             label="Display name"
             field="displayName"
-            initialValue={profile.displayName ?? profile.username}
+            initialValue={profile.displayName}
             placeholder="Your display name"
           />
 

@@ -78,19 +78,21 @@ export const useUpdateProfile = (profileUserId?: string) => {
     },
 
     onSuccess: (updatedProfile) => {
-      console.log("Updated profile from API:", updatedProfile)
-
-      console.log("Current profile cache:", queryClient.getQueryData(queryKey))
-      // Merge the mutation's full Profile response into the cached User view.
-      // Do not invalidate immediately: the provided schema cannot query Profile
-      // fields such as headline/about, so a refetch would erase those values.
       queryClient.setQueryData<ProfileViewModel>(
         queryKey,
         (previousProfile) => {
           if (!previousProfile) return previousProfile
+
+          // Only apply fields actually returned by the API.
+          const definedUpdates = Object.fromEntries(
+            Object.entries(updatedProfile).filter(
+              ([, value]) => value !== undefined
+            )
+          )
+
           return {
             ...previousProfile,
-            ...updatedProfile,
+            ...definedUpdates,
             id: previousProfile.id,
             userId: previousProfile.userId,
             username: previousProfile.username,
