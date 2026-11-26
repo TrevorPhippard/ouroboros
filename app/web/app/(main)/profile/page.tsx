@@ -1,4 +1,5 @@
 import { ProfileView } from "@/features/profile/components/ProfileView"
+import { useAuthStore } from "@/store/useAuthStore"
 import { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -7,11 +8,11 @@ export const metadata: Metadata = {
 }
 
 export default function ProfilePage() {
-  const currentUserId = "user-1"
-
+  const userId = useAuthStore.getState().user?.id
+  console.log("seregreger", userId)
   return (
     <main className="min-h-screen bg-gray-50 pt-16">
-      <ProfileView userId={currentUserId} />
+      <ProfileView userId={userId} />
     </main>
   )
 }

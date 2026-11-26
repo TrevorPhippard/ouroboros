@@ -1,23 +1,51 @@
 "use client"
 
-import { useState, type FormEvent } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 import { useProfile } from "../hooks/useProfile"
 import { useUpdateProfile } from "../hooks/useUpdateProfile"
 import { EditableField } from "./EditableField"
 import FileUploadField, { type UploadedImage } from "./FileUploadField"
+import { useQueryClient } from "@tanstack/react-query"
+import { useAuthStore } from "@/store/useAuthStore"
 
-export const ProfileView = ({ userId }: { userId: string }) => {
+const ProfileSkeleton = () => (
+  <div className="mx-auto max-w-4xl animate-pulse space-y-6 py-8">
+    <div className="h-64 rounded-lg bg-gray-200 shadow" />
+    <div className="h-40 rounded-lg bg-gray-200 shadow" />
+    <div className="h-96 rounded-lg bg-gray-200 shadow" />
+  </div>
+)
+
+export const ProfileView = ({ userId }: { userId: string | null }) => {
   const { data: profile, isLoading, isError } = useProfile(userId)
   const {
     mutateAsync: updateProfile,
     isPending: isSavingAvatar,
     error: avatarSaveError,
   } = useUpdateProfile(userId)
+
+  const queryClient = useQueryClient()
+
+  const isCurrent = useAuthStore.getState()?.user?.id == userId
+
+  useEffect(() => {
+    const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
+      if (event.query.queryKey[0] === "profile") {
+        // console.log("PROFILE CACHE EVENT:", event.type)
+        // console.log("CACHE DATA:", event.query.state.data)
+      }
+    })
+
+    return unsubscribe
+  }, [queryClient])
+
   const [avatar, setAvatar] = useState<UploadedImage | null>(null)
 
-  if (isLoading) return <ProfileSkeleton />
+  if (isLoading || !profile) {
+    return <ProfileSkeleton />
+  }
 
-  if (isError || !profile) {
+  if (isError) {
     return <div className="p-4 text-red-500">Failed to load profile.</div>
   }
 
@@ -33,13 +61,21 @@ export const ProfileView = ({ userId }: { userId: string }) => {
     }
   }
 
+  console.log("PROFILE VIEW:", {
+    userId,
+    isCurrent,
+  })
+
   return (
     <div className="mx-auto max-w-4xl space-y-6 py-8">
       <div className="overflow-hidden rounded-lg bg-white shadow">
         <div className="relative h-32 bg-slate-300">
           <div className="absolute -bottom-12 left-6 h-24 w-24 overflow-hidden rounded-full border-4 border-white bg-white shadow-sm">
             <img
-              src={profile.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.id}`}
+              src={
+                profile.avatarUrl ||
+                `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.id}`
+              }
               alt="Profile avatar"
               className="h-full w-full object-cover"
             />
@@ -51,7 +87,8 @@ export const ProfileView = ({ userId }: { userId: string }) => {
             userId={userId}
             label="Display name"
             field="displayName"
-            initialValue={profile.displayName ?? profile.username}
+            enabled={isCurrent}
+            initialValue={profile.displayName}
             placeholder="Your display name"
           />
 
@@ -59,12 +96,14 @@ export const ProfileView = ({ userId }: { userId: string }) => {
             userId={userId}
             label="Headline"
             field="headline"
+            enabled={isCurrent}
             initialValue={profile.headline}
             placeholder="Add a professional headline"
           />
 
           <p className="text-sm text-gray-500">
-            {profile.followingCount} following{" • "}{profile.followersCount} followers
+            {profile.followingCount} following{" • "}
+            {profile.followersCount} followers
           </p>
         </div>
       </div>
@@ -75,42 +114,41 @@ export const ProfileView = ({ userId }: { userId: string }) => {
           userId={userId}
           label="Bio"
           field="bio"
+          enabled={isCurrent}
           initialValue={profile.bio}
           multiline
           placeholder="Add a summary about yourself..."
         />
       </div>
 
-      <div className="space-y-4 rounded-lg bg-white p-6 shadow">
-        <h2 className="text-xl font-semibold text-gray-900">Profile settings</h2>
-        <form onSubmit={saveAvatar}>
-          <label className="mb-2 block font-medium">Profile avatar</label>
-          <FileUploadField
-            initialValue={profile.avatarUrl}
-            onUploadComplete={setAvatar}
-          />
+      {isCurrent && (
+        <div className="space-y-4 rounded-lg bg-white p-6 shadow">
+          <h2 className="text-xl font-semibold text-gray-900">
+            Profile settings
+          </h2>
+          <form onSubmit={saveAvatar}>
+            <label className="mb-2 block font-medium">Profile avatar</label>
+            <FileUploadField
+              initialValue={profile.avatarUrl}
+              onUploadComplete={setAvatar}
+            />
 
-          {avatarSaveError && (
-            <p role="alert" className="mt-2 text-sm text-red-600">{avatarSaveError.message}</p>
-          )}
+            {avatarSaveError && (
+              <p role="alert" className="mt-2 text-sm text-red-600">
+                {avatarSaveError.message}
+              </p>
+            )}
 
-          <button
-            type="submit"
-            disabled={!avatar || isSavingAvatar}
-            className="mt-4 rounded-md bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isSavingAvatar ? "Saving avatar..." : "Save avatar"}
-          </button>
-        </form>
-      </div>
+            <button
+              type="submit"
+              disabled={!avatar || isSavingAvatar}
+              className="mt-4 rounded-md bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isSavingAvatar ? "Saving avatar..." : "Save avatar"}
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   )
 }
-
-const ProfileSkeleton = () => (
-  <div className="mx-auto max-w-4xl animate-pulse space-y-6 py-8">
-    <div className="h-64 rounded-lg bg-gray-200 shadow" />
-    <div className="h-40 rounded-lg bg-gray-200 shadow" />
-    <div className="h-96 rounded-lg bg-gray-200 shadow" />
-  </div>
-)

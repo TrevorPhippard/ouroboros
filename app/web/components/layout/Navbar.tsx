@@ -35,7 +35,7 @@ export const Navbar = () => {
         <div className="flex flex-1 items-center gap-2">
           <img src="/mini.svg" alt="ourobous icon" width={30} height={30} />
           <div className="rounded p-1 text-xl leading-none font-bold">
-            οὐροβόρος
+            ouroboros
           </div>
           <div className="relative hidden w-full max-w-xs md:block">
             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-500" />

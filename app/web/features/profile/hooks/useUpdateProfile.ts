@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { gqlRequest } from "@/services/graphql/client"
-import { UPDATE_PROFILE } from "../api/profileQueries"
+import { UPDATE_PROFILE } from "@/lib/queries"
 import { useAuthStore } from "@/store/useAuthStore"
 import type {
   ProfileType,
@@ -30,13 +30,18 @@ const toGraphQLInput = (updates: ProfileUpdateInput): ProfileUpdateInput => {
   return input
 }
 
-export const useUpdateProfile = (profileUserId?: string) => {
+export const useUpdateProfile = (profileUserId?: string | null) => {
   const authenticatedUserId = useAuthStore((state) => state.user?.id)
   const userId = profileUserId ?? authenticatedUserId
   const queryClient = useQueryClient()
   const queryKey = ["profile", userId]
 
-  return useMutation<ProfileType, Error, ProfileUpdateInput, { previousProfile?: ProfileViewModel }>({
+  return useMutation<
+    ProfileType,
+    Error,
+    ProfileUpdateInput,
+    { previousProfile?: ProfileViewModel }
+  >({
     mutationFn: async (updates) => {
       if (!userId) throw new Error("You must be signed in to update a profile.")
 
@@ -59,7 +64,8 @@ export const useUpdateProfile = (profileUserId?: string) => {
 
     onMutate: async (updates) => {
       await queryClient.cancelQueries({ queryKey })
-      const previousProfile = queryClient.getQueryData<ProfileViewModel>(queryKey)
+      const previousProfile =
+        queryClient.getQueryData<ProfileViewModel>(queryKey)
 
       if (previousProfile) {
         queryClient.setQueryData<ProfileViewModel>(queryKey, {
@@ -72,22 +78,30 @@ export const useUpdateProfile = (profileUserId?: string) => {
     },
 
     onSuccess: (updatedProfile) => {
-      // Merge the mutation's full Profile response into the cached User view.
-      // Do not invalidate immediately: the provided schema cannot query Profile
-      // fields such as headline/about, so a refetch would erase those values.
-      queryClient.setQueryData<ProfileViewModel>(queryKey, (previousProfile) => {
-        if (!previousProfile) return previousProfile
-        return {
-          ...previousProfile,
-          ...updatedProfile,
-          id: previousProfile.id,
-          userId: previousProfile.userId,
-          username: previousProfile.username,
-          followersCount: previousProfile.followersCount,
-          followingCount: previousProfile.followingCount,
-          isFollowing: previousProfile.isFollowing,
+      queryClient.setQueryData<ProfileViewModel>(
+        queryKey,
+        (previousProfile) => {
+          if (!previousProfile) return previousProfile
+
+          // Only apply fields actually returned by the API.
+          const definedUpdates = Object.fromEntries(
+            Object.entries(updatedProfile).filter(
+              ([, value]) => value !== undefined
+            )
+          )
+
+          return {
+            ...previousProfile,
+            ...definedUpdates,
+            id: previousProfile.id,
+            userId: previousProfile.userId,
+            username: previousProfile.username,
+            followersCount: previousProfile.followersCount,
+            followingCount: previousProfile.followingCount,
+            isFollowing: previousProfile.isFollowing,
+          }
         }
-      })
+      )
     },
 
     onError: (_error, _updates, context) => {

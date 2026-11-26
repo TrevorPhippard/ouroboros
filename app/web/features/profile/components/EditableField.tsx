@@ -7,9 +7,10 @@ import type { ProfileUpdateInput } from "../schemas"
 type EditableFieldProps = {
   label: string
   field: keyof ProfileUpdateInput
-  userId?: string
+  userId?: string | null
   initialValue?: string | null
   multiline?: boolean
+  enabled?: boolean
   placeholder?: string
 }
 
@@ -18,6 +19,7 @@ export const EditableField = ({
   field,
   userId,
   initialValue,
+  enabled,
   multiline = false,
   placeholder,
 }: EditableFieldProps) => {
@@ -53,7 +55,9 @@ export const EditableField = ({
       setDraft("")
       setSaveError("")
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : "Could not save this field.")
+      setSaveError(
+        error instanceof Error ? error.message : "Could not save this field."
+      )
     }
   }
 
@@ -62,7 +66,7 @@ export const EditableField = ({
       <div className="flex items-center justify-between gap-3">
         <label className="text-sm font-medium text-gray-500">{label}</label>
 
-        {!isEditing && (
+        {enabled && !isEditing && (
           <button
             type="button"
             onClick={handleEdit}
@@ -95,7 +99,11 @@ export const EditableField = ({
             />
           )}
 
-          {saveError && <p role="alert" className="text-sm text-red-600">{saveError}</p>}
+          {saveError && (
+            <p role="alert" className="text-sm text-red-600">
+              {saveError}
+            </p>
+          )}
 
           <div className="flex gap-2">
             <button

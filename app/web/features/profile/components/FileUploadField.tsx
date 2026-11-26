@@ -39,12 +39,12 @@ export default function FileUploadField({
     setImageUrl(initialValue || "")
   }, [initialValue])
 
-  function getFileName(url: string) {
+  const getFileName = (url: string) => {
     try {
-      const pathname = new URL(url, window.location.origin).pathname
-      return decodeURIComponent(pathname.split("/").pop() || "Image")
+      const pathname = new URL(url).pathname
+      return pathname.split("/").pop() || ""
     } catch {
-      return url.split("/").pop() || "Image"
+      return url.split("?")[0].split("/").pop() || ""
     }
   }
 
