@@ -18,7 +18,8 @@ const mockProfileDb: Record<string, ProfileType> = {
         company: "Tech Innovations Inc.",
         startDate: "2023-01",
         endDate: null,
-        description: "Led frontend architecture and component-system development.",
+        description:
+          "Led frontend architecture and component-system development.",
       },
     ],
   },
@@ -37,7 +38,7 @@ export const getProfileApi = async (userId: string): Promise<ProfileType> => {
 
 export const updateProfileApi = async (
   userId: string,
-  updates: ProfileUpdateInput = {},
+  updates: ProfileUpdateInput = {}
 ): Promise<ProfileType> => {
   await delay(1000)
 

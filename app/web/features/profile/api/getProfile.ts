@@ -6,7 +6,9 @@ type GetProfileResponse = {
   profile: ProfileViewModel | null
 }
 
-export const getProfile = async (userId: string): Promise<ProfileViewModel> => {
+export const getProfile = async (
+  userId: string | null
+): Promise<ProfileViewModel> => {
   const response = (await gqlRequest({
     query: GET_PROFILE,
     variables: { userId },

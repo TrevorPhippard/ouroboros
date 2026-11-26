@@ -34,7 +34,7 @@ export const useFeedQuery = () => {
                   "Just shipped the new dashboard UI using Tailwind CSS and TanStack Query! Excited for user feedback. 🚀",
                 createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 mins ago
                 author: {
-                  id: "profile-1",
+                  id: "user-2",
                   username: "sarah_dev",
                   displayName: "Sarah Jenkins",
                   avatarUrl:
@@ -51,7 +51,7 @@ export const useFeedQuery = () => {
                   "Working on state management strategies today. What is everyone's current favorite setup?",
                 createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(), // 2 hours ago
                 author: {
-                  id: "profile-2",
+                  id: "user-3",
                   username: "alex_codes",
                   displayName: "Alex Rivera",
                   avatarUrl:

@@ -62,10 +62,19 @@ func SeedDB(db *gorm.DB) {
 		{
 			ID:          "profile-2",
 			UserId:      "user-2",
-			DisplayName: "Bob",
+			DisplayName: "Sarah Jenkins",
+			AvatarUrl:   "https://api.dicebear.com/7.x/avataaars/svg?seed=user-2",
+			Bio:         "I am Sarah! I do things with code.",
+			Headline:    "Frontend Engineer | UI/UX enthusiast",
+			About:       "Love creating products that people love.",
+		},
+		{
+			ID:          "profile-2",
+			UserId:      "user-2",
+			DisplayName: "Alex Rivera",
 			AvatarUrl:   "https://api.dicebear.com/7.x/avataaars/svg?seed=user-2",
 			Bio:         "Bob here! Avid traveler and foodie.",
-			Headline:    "Product Manager",
+			Headline:    "Full Stack Developer & Coffee Addict",
 			About:       "Love creating products that people love.",
 		},
 	}

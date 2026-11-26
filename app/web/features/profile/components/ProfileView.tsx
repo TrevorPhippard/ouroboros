@@ -6,8 +6,17 @@ import { useUpdateProfile } from "../hooks/useUpdateProfile"
 import { EditableField } from "./EditableField"
 import FileUploadField, { type UploadedImage } from "./FileUploadField"
 import { useQueryClient } from "@tanstack/react-query"
+import { useAuthStore } from "@/store/useAuthStore"
 
-export const ProfileView = ({ userId }: { userId: string }) => {
+const ProfileSkeleton = () => (
+  <div className="mx-auto max-w-4xl animate-pulse space-y-6 py-8">
+    <div className="h-64 rounded-lg bg-gray-200 shadow" />
+    <div className="h-40 rounded-lg bg-gray-200 shadow" />
+    <div className="h-96 rounded-lg bg-gray-200 shadow" />
+  </div>
+)
+
+export const ProfileView = ({ userId }: { userId: string | null }) => {
   const { data: profile, isLoading, isError } = useProfile(userId)
   const {
     mutateAsync: updateProfile,
@@ -17,11 +26,13 @@ export const ProfileView = ({ userId }: { userId: string }) => {
 
   const queryClient = useQueryClient()
 
+  const isCurrent = useAuthStore.getState()?.user?.id == userId
+
   useEffect(() => {
     const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
       if (event.query.queryKey[0] === "profile") {
-        console.log("PROFILE CACHE EVENT:", event.type)
-        console.log("CACHE DATA:", event.query.state.data)
+        // console.log("PROFILE CACHE EVENT:", event.type)
+        // console.log("CACHE DATA:", event.query.state.data)
       }
     })
 
@@ -49,7 +60,12 @@ export const ProfileView = ({ userId }: { userId: string }) => {
       // React Query exposes the error above so the user can retry.
     }
   }
-  console.log(profile)
+
+  console.log("PROFILE VIEW:", {
+    userId,
+    isCurrent,
+  })
+
   return (
     <div className="mx-auto max-w-4xl space-y-6 py-8">
       <div className="overflow-hidden rounded-lg bg-white shadow">
@@ -71,6 +87,7 @@ export const ProfileView = ({ userId }: { userId: string }) => {
             userId={userId}
             label="Display name"
             field="displayName"
+            enabled={isCurrent}
             initialValue={profile.displayName}
             placeholder="Your display name"
           />
@@ -79,6 +96,7 @@ export const ProfileView = ({ userId }: { userId: string }) => {
             userId={userId}
             label="Headline"
             field="headline"
+            enabled={isCurrent}
             initialValue={profile.headline}
             placeholder="Add a professional headline"
           />
@@ -96,46 +114,41 @@ export const ProfileView = ({ userId }: { userId: string }) => {
           userId={userId}
           label="Bio"
           field="bio"
+          enabled={isCurrent}
           initialValue={profile.bio}
           multiline
           placeholder="Add a summary about yourself..."
         />
       </div>
 
-      <div className="space-y-4 rounded-lg bg-white p-6 shadow">
-        <h2 className="text-xl font-semibold text-gray-900">
-          Profile settings
-        </h2>
-        <form onSubmit={saveAvatar}>
-          <label className="mb-2 block font-medium">Profile avatar</label>
-          <FileUploadField
-            initialValue={profile.avatarUrl}
-            onUploadComplete={setAvatar}
-          />
+      {isCurrent && (
+        <div className="space-y-4 rounded-lg bg-white p-6 shadow">
+          <h2 className="text-xl font-semibold text-gray-900">
+            Profile settings
+          </h2>
+          <form onSubmit={saveAvatar}>
+            <label className="mb-2 block font-medium">Profile avatar</label>
+            <FileUploadField
+              initialValue={profile.avatarUrl}
+              onUploadComplete={setAvatar}
+            />
 
-          {avatarSaveError && (
-            <p role="alert" className="mt-2 text-sm text-red-600">
-              {avatarSaveError.message}
-            </p>
-          )}
+            {avatarSaveError && (
+              <p role="alert" className="mt-2 text-sm text-red-600">
+                {avatarSaveError.message}
+              </p>
+            )}
 
-          <button
-            type="submit"
-            disabled={!avatar || isSavingAvatar}
-            className="mt-4 rounded-md bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isSavingAvatar ? "Saving avatar..." : "Save avatar"}
-          </button>
-        </form>
-      </div>
+            <button
+              type="submit"
+              disabled={!avatar || isSavingAvatar}
+              className="mt-4 rounded-md bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isSavingAvatar ? "Saving avatar..." : "Save avatar"}
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   )
 }
-
-const ProfileSkeleton = () => (
-  <div className="mx-auto max-w-4xl animate-pulse space-y-6 py-8">
-    <div className="h-64 rounded-lg bg-gray-200 shadow" />
-    <div className="h-40 rounded-lg bg-gray-200 shadow" />
-    <div className="h-96 rounded-lg bg-gray-200 shadow" />
-  </div>
-)

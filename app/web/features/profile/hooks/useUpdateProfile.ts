@@ -30,7 +30,7 @@ const toGraphQLInput = (updates: ProfileUpdateInput): ProfileUpdateInput => {
   return input
 }
 
-export const useUpdateProfile = (profileUserId?: string) => {
+export const useUpdateProfile = (profileUserId?: string | null) => {
   const authenticatedUserId = useAuthStore((state) => state.user?.id)
   const userId = profileUserId ?? authenticatedUserId
   const queryClient = useQueryClient()

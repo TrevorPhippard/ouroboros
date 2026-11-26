@@ -1,9 +1,8 @@
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
 import { getQueryClient } from "@/lib/getQueryClient"
-import { gqlRequest } from "@/services/graphql/client"
 import { ProfileView } from "@/features/profile/components/ProfileView"
-import { GET_PROFILE } from "@/lib/queries"
 import { getProfile } from "@/features/profile/api/getProfile"
+import { useAuthStore } from "@/store/useAuthStore"
 
 // 1. Update the type definition so TypeScript knows params is a Promise
 type Props = {
@@ -14,7 +13,6 @@ export default async function UserProfilePage({ params }: Props) {
   // 2. Await the params object (Next.js 15 standard)
   const resolvedParams = await params
   const userId = resolvedParams.id
-
   const queryClient = getQueryClient()
 
   // 3. Use the unwrapped userId for your query prefetching
@@ -22,7 +20,7 @@ export default async function UserProfilePage({ params }: Props) {
     queryKey: ["profile", userId],
     queryFn: () => getProfile(userId),
   })
-
+  console.log(useAuthStore.getState().user, userId)
   return (
     <main className="mx-auto max-w-4xl py-6">
       <HydrationBoundary state={dehydrate(queryClient)}>

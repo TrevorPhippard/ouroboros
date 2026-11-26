@@ -1,15 +1,16 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useUpdateProfile } from "../hooks/useUpdateProfile"
 import type { ProfileUpdateInput } from "../schemas"
 
 type EditableFieldProps = {
   label: string
   field: keyof ProfileUpdateInput
-  userId?: string
+  userId?: string | null
   initialValue?: string | null
   multiline?: boolean
+  enabled?: boolean
   placeholder?: string
 }
 
@@ -18,6 +19,7 @@ export const EditableField = ({
   field,
   userId,
   initialValue,
+  enabled,
   multiline = false,
   placeholder,
 }: EditableFieldProps) => {
@@ -64,7 +66,7 @@ export const EditableField = ({
       <div className="flex items-center justify-between gap-3">
         <label className="text-sm font-medium text-gray-500">{label}</label>
 
-        {!isEditing && (
+        {enabled && !isEditing && (
           <button
             type="button"
             onClick={handleEdit}

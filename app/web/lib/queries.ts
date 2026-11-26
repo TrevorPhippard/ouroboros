@@ -74,12 +74,9 @@ export const UPDATE_PROFILE = gql`
       id
       headline
       about
-      username
       displayName
       avatarUrl
       bio
-      followersCount
-      followingCount
     }
   }
 `
